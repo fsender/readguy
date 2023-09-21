@@ -1,0 +1,11 @@
+const uint8_t verify[809] =
+"<!DOCTYPE html><html lang=\"zh-cn\">\n<head><meta charset=\"utf-8\"><title>readguy 初"
+"始化</title></head>\n<body><h1>readguy 验证页面,马上就好</h1>\n<p>屏幕"
+"即将显示.<br/>\n请在显示完成后依次按下所有按键进行测试,确"
+"保按键可正常工作<br/>\n按键按下时, 屏幕将会在对应地方显示"
+"为黑色, 松开为白色<br/>\n请输入屏幕上显示的内容<br/>\n如果屏"
+"幕或者按键无响应请返回到<a href=\"/\">设置页面</a><br/></p>\n<form "
+"action=\"/final\" method=\"POST\">\n<input type=\'text\' name=\'t_verify\' maxlength=\"6\"/"
+"><br/>\n<input type=\'submit\' value=\'确定!\'/><br/>\n</form>\n<br/><p>Copyright ("
+"C) FriendshipEnder <a href=\"https://github.com/fsender/readguy\">GitHub</a>\n <a "
+"href=\"https://space.bilibili.com/180327370/\">Bilibili</a></p>\n</body></html>";

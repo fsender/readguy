@@ -1,0 +1,12 @@
+const uint8_t final[837] =
+"<!DOCTYPE html><html lang=\"zh-cn\">\n<head><meta charset=\"utf-8\"><title>欢迎使"
+"用 readguy</title></head>\n<body><h1>readguy 欢迎页面</h1>\n<p>您已完成了"
+"初始化工作.现在可以配置WiFi和聚合密钥相关内容.<br/></p>\n返回"
+"<a href=\"/pinsetup\">设置页面</a><br/>\n前往<a href=\"/edit\">SD卡文件管理器页面"
+"</a><br/>\n\n<form action=\"/wifi\" method=\"POST\">\nWiFi 名称<input type=\'text\' n"
+"ame=\'ssid\' maxlength=\"31\"/><br/>\nWiFi 密码<input type=\'text\' name=\'psk\' maxlen"
+"gth=\"31\"/><br/>\n天气所在地<input type=\'text\' name=\'ssid\' maxlength=\"31\"/><b"
+"r/>\n聚合数据API密钥<input type=\'text\' name=\'psk\' maxlength=\"63\"/><br/>\n</"
+"form>\n<br/><p>Copyright (C) FriendshipEnder <a href=\"https://github.com/fsender/"
+"readguy\">GitHub</a>\n <a href=\"https://space.bilibili.com/180327370/\">Bilibili</"
+"a></p>\n</body></html>";

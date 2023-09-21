@@ -1,0 +1,6 @@
+.pio
+.vscode
+extra/tools/readguy_theme.psd
+lib/LovyanGFX
+test/epd_drivers
+test/lib_backup

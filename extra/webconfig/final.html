@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+  <meta charset="utf-8">
+  <title>欢迎使用 readguy</title>
+</head>
+
+<body>
+  <h1>readguy 欢迎页面</h1>
+  <p>您已完成了初始化工作.现在可以配置WiFi和聚合密钥相关内容.<br />
+  </p>返回<a href="/pinsetup">设置页面</a><br />前往<a href="/edit">SD卡文件管理器页面</a>
+  <br />SD card size: 2967040KB, used size: 28224KB.<br />
+  当前WiFi模式: AP配网模式, IP地址: (IP unset)<br />
+  芯片型号: ESP-12E or 12F, 芯片闪存ID: 0x00000000<br />
+  闪存容量: 4096KB, MAC地址: 48:3F:DA:76:24:46<br />
+  <b>引脚定义:</b><br />EpdMOSI:-1EpdSCLK:-1Epd_CS:15Epd_DC:5Epd_RST:-1
+  EpdBusy:0SD_MISO:-1SD_MOSI:-1SD_SCLK:-1SD_CS:0<br />按键定义:btn1:5btn2:12btn3:2<br />
+  <form action="/wifi" method="POST">WiFi 名称<input type='text' name='ssid' maxlength="31" /><br />WiFi 密码<input
+      type='text' name='psk' maxlength="31" /><br />天气所在地<input type='text' name='ssid'
+      maxlength="31" /><br />聚合数据API密钥<input type='text' name='psk' maxlength="63" /><br /></form><br />
+  <p>ReadGuy for device ESP8266<br />Copyright © FriendshipEnder <a href="https://github.com/fsender/readguy">GitHub</a>
+    <a href="https://space.bilibili.com/180327370/">Bilibili</a><br />版本: 1.0.0 ,编译日期: Sep 20 202318:17:07</p>
+</body>
+
+</html>

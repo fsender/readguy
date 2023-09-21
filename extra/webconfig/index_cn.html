@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+  <meta charset="utf-8">
+  <title>readguy 设置</title>
+</head>
+
+<body>
+  <h1>readguy 设置页面</h1>
+  <p>感谢您使用ReadGuy. 现在将引脚配置输入到框内, 即可成功点亮屏幕.<br />点击<a href="/wifi">配置WiFi</a><br />点击<a href="/api">配置聚合数据API密钥</a><br /></p>
+  <form name="input" action="/verify" method="POST">
+    <h2>引脚定义设定</h2><input type="checkbox" name="share" value="1">墨水屏和SD卡共享SPI<br />E-paper 型号<select name="epdtype">
+      <option value="0" selected>1.54寸标准</option>
+      <option value="1">1.54寸Lilygo</option>
+      <option value="2">2.13寸汉朔价签</option>
+      <option value="3">2.66寸Vusion价签</option>
+      <option value="4">2.13寸三色</option>
+      <option value="5">2.9寸A01</option>
+      <option value="6">2.9寸T94背光</option>
+      <option value="7">4.2寸WF丝印</option>
+      <option value="8">4.2寸HINK黑白价签</option>
+      <option value="9">3.7寸高DPI墨水屏</option>
+      <option value="10">测试用LCD屏 请勿选此项</option>
+      <option value="11">2.7寸佳显触摸墨水屏</option>
+    </select><br />Epd_CS<input type="number" name="Epd_CS" min="-1" max="100" step="1" value="15" /><br />
+    Epd_DC<input type="number" name="Epd_DC" min="-1" max="100" step="1" value="5" /><br />
+    Epd_RST<input type="number" name="Epd_RST" min="-1" max="100" step="1" value="-1" /><br />
+    EpdBusy<input type="number" name="EpdBusy" min="-1" max="100" step="1" value="4" /><br />
+    SD_CS<input type="number" name="SD_CS" min="-1" max="100" step="1" value="0" /><br />
+    几个按键?<br /><input type="number" name="btn_cnt" min="1" max="3" step="1" value="3" /><br />
+    按键 1 引脚<input type="number" name="btn1" min="-1" max="100" step="1" value="5" /><br />
+    <input type="checkbox" name="btn1c" value="1">高电平触发<br />
+    按键 2 引脚<input type="number" name="btn2" min="-1" max="100" step="1" value="12" /><br />
+    <input type="checkbox" name="btn2c" value="1">高电平触发<br />
+    按键 3 引脚<input type="number" name="btn3" min="-1" max="100" step="1" value="2" /><br />
+    <input type="checkbox" name="btn3c" value="1">高电平触发<br />
+    背光 PWM 引脚<input type="number" name="bklight" min="-1" max="100" step="1" value="-1" /><br />
+    <input type='submit' value='确定!' /><br />
+  </form><br />
+  <p>ReadGuy on device ESP8266<br />Copyright © FriendshipEnder <a href="https://github.com/fsender/readguy">GitHub</a>
+    <a href="https://space.bilibili.com/180327370/">Bilibili</a><br />版本: 1.0.0 ,编译日期: Sep 20 202318:17:07</p>
+</body>
+
+</html>
