@@ -2,7 +2,7 @@
 
 <img src="extra/artset/readguy_theme3.png" width="30%" height="auto">
 
-**版本1.0正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
+**版本1.0.2正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
 
 欢迎克隆, 项目交流QQ群: 926824162 (萌新可以进来问问题的哟), 项目的 Bilibili 主页: 
 

@@ -284,7 +284,6 @@ class readguy_driver: public LGFX_Sprite{ // readguy 基础类
     void handleFinalPost(); //服务器-校验屏幕是否正常回调函数
     void handleWiFiPost();  //服务器-处理WiFi连接相关内容和API接口密钥功能
     void handleNotFound();  //服务器-404响应
-    void FSBrowser_setup(); //服务器-初始化文件服务器
 #endif
     //按键驱动部分
     static guy_button btn_rd[3];

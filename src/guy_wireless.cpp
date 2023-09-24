@@ -64,10 +64,9 @@ void readguy_driver::server_setup(const serveFunc *serveFuncs, int funcs){
   sv.on("/pinsetup", HTTP_GET,  std::bind(&readguy_driver::handlePinSetup ,this));
   sv.on("/final",    HTTP_POST, std::bind(&readguy_driver::handleFinalPost,this)); //此时验证已经正确
   sv.on("/wifi",     HTTP_POST, std::bind(&readguy_driver::handleWiFiPost ,this)); //此时验证已经正确
-  for(int i=0;i<funcs;i++){
+  for(int i=0;i<funcs;i++){   //set-up 第三方库内容, 初始化后即可使用
     sv.on(serveFuncs[i].event,HTTPMethod(serveFuncs[i].method),serveFuncs[i].func);
   }
-  FSBrowser_setup();    //set-up for fs-browser. 第三方库内容, 初始化后即可使用
   /*sv.on("/favicon.ico", HTTP_GET, [&](){
     sv.client().write_P(PSTR("HTTP/1.1 200 OK\r\n"
                              "Content-Type: image/x-icon\r\n"
@@ -408,7 +407,6 @@ void readguy_driver::handleNotFound(){
   //Serial.println(F("handleNotFound fx"));
   sv.send_P(404, TEXT_PLAIN, PSTR("404 Not Found."));
 }
-void readguy_driver::FSBrowser_setup(){} //初始化文件系统
 void readguy_driver::handleWiFiPost(){} //设置WiFi和聚合天气
 
 

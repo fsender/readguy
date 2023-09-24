@@ -1,0 +1,25 @@
+{
+  "name": "readguy",
+  "description": "A free E-paper display driver library supports 16-level greyscale.",
+  "keywords": "epd,e-paper,epd-display,gfx,esp32,esp8266,esp32s2,esp32s3,esp32c3",
+  "authors": {
+    "name": "fsender",
+    "url": "https://github.com/fsender",
+    "maintainer": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fsender/readguy"
+  },
+  "version": "1.1.0",
+  "frameworks": "arduino",
+  "platforms": ["espressif32", "espressif8266"],
+  "headers": "readguy.h",
+  "build": {
+    "libArchive": false
+  },
+  "dependencies": {
+      "name": "lovyan03/LovyanGFX",
+      "version": ">=1.1.9"
+  }
+}
