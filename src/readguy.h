@@ -36,7 +36,6 @@
 #include <SPI.h>
 #include <FS.h>
 
-//#include <esp-fs-webserver.h>
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
 
@@ -120,25 +119,37 @@
 #define READGUY_sd_mosi  (config_data[10])// 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
 #define READGUY_sd_sclk  (config_data[11])// 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
 #define READGUY_sd_cs    (config_data[12])// 目标sd卡的 CS   引脚.
+#define READGUY_i2c_sda  (config_data[13])// 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
+#define READGUY_i2c_scl  (config_data[14])// 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
     //按键驱动部分, 为负代表高触发, 否则低触发,
     //注意, 这里的io编号是加1的, 即 1或-1 代表 gpio0 的低触发/高触发
-#define READGUY_btn1     (config_data[13]) 
-#define READGUY_btn2     (config_data[14]) 
-#define READGUY_btn3     (config_data[15]) 
-#define READGUY_bl_pin   (config_data[16])//前置光接口引脚IO
-#define READGUY_rtc_type (config_data[17])//使用的RTC型号(待定, 还没用上)
-#define READGUY_sd_ok    (config_data[18]) //SD卡已经成功初始化
-#define READGUY_buttons  (config_data[19]) //按钮个数, 0-3都有可能
+#define READGUY_btn1     (config_data[15]) 
+#define READGUY_btn2     (config_data[16]) 
+#define READGUY_btn3     (config_data[17]) 
+#define READGUY_bl_pin   (config_data[18])//前置光接口引脚IO
+#define READGUY_rtc_type (config_data[19])//使用的RTC型号(待定, 还没用上)
+#define READGUY_sd_ok    (config_data[20]) //SD卡已经成功初始化
+#define READGUY_buttons  (config_data[21]) //按钮个数, 0-3都有可能
 #endif
 
-class readguy_driver: public LGFX_Sprite{ // readguy 基础类
+class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
   public:
-    readguy_driver();
+#ifdef READGUY_ESP_ENABLE_WIFI
+#ifdef ESP8266
+    typedef ESP8266WebServer ReadguyWebServer;
+    typedef ESP8266HTTPUpdateServer ReadguyUpdateServer;
+#else
+    typedef WebServer ReadguyWebServer;
+    typedef HTTPUpdateServer ReadguyUpdateServer;
+#endif
+#endif
+    ReadguyDriver();
     /** @brief 初始化readguy
+     *  @param WiFiSet 是否保持AP模式关闭. 0:配网完成自动关WiFi, 1:需要手动调用 WiFi.mode(WIFI_OFF) 关闭WiFi.
+     * 2:自动连接到已存的WiFi, 但不等待连接成功
      *  @return SD卡是否就绪
      */
-    uint8_t init();
-    //LGFX_Sprite g() const { return gfx; }; //使用 gfx 绘制内容.
+    uint8_t init(uint8_t WiFiSet = 0);
     /// @brief 设置显示亮度
     void setBright(int d);
     /// @brief 返回显示亮度
@@ -187,22 +198,22 @@ class readguy_driver: public LGFX_Sprite{ // readguy 基础类
     void sleepEPD(void);
     /// @brief ap配网设置页面
     typedef struct {
-      String event;
-      int method; //其实这里的method的类型应当为HTTPMethod, 但是为了兼容无wifi的功能, 使用了int格式
-      std::function<void()> func;
+      String linkname; 
+      String event;    //链接名称 事件URI
+      std::function<void(ReadguyWebServer*)> func; //触发时执行的函数
     } serveFunc;
 #ifdef READGUY_ESP_ENABLE_WIFI
     /// @brief 初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
     void ap_setup();
     /// @brief 初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
-    void server_setup(const serveFunc *serveFuncs = nullptr, int funcs = 0);
+    void server_setup(const String &notify=emptyString, const serveFunc *serveFuncs = nullptr, int funcs = 0);
     bool server_loop();
-    void server_end() { sv.stop(); MDNS.end(); }
+    void server_end();
 #else
     /// @brief 初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
     void ap_setup(){}
-    /// @brief 初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
-    void server_setup(const serveFunc *serveFuncs = nullptr, int funcs = 0){}
+    /// @brief 初始化服务器模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
+    void server_setup(const String &notify=emptyString, const serveFunc *serveFuncs = nullptr, int funcs = 0){}
     bool server_loop(){ return true; }
     void server_end(){}
 #endif
@@ -229,10 +240,10 @@ class readguy_driver: public LGFX_Sprite{ // readguy 基础类
     //以下是支持的所有屏幕型号 Add devices here!
     //添加屏幕驱动范例: 直接添加对应屏幕的类就可以用了
     static const char projname[8];
-    static const char tagname[9];
-    //数据是否已经校准
-#ifdef DYNAMIC_PIN_SETTINGS
-    int8_t config_data[20];
+    static const char tagname[7];
+    //uint8_t config_wifi=0; //是否强行在初始化期间设置WiFi.
+#ifdef DYNAMIC_PIN_SETTINGS//数据是否已经校准
+    int8_t config_data[22];
     char randomch[4]; //校验用字符串
     void nvs_init();  //初始化持久存储器.
     void nvs_deinit();//保存持久存储器的内容
@@ -245,7 +256,6 @@ class readguy_driver: public LGFX_Sprite{ // readguy 基础类
 #endif
     int epd_OK=0; //墨水屏可用
     int currentBright = -3; //初始亮度
-    //.........敬请期待更多屏幕ic...........
     
     //LGFX_Sprite gfx; // 图形引擎类指针, 可以用这个指针去操作屏幕缓冲区
     readguyEpdBase *guy_dev = nullptr;
@@ -255,19 +265,9 @@ class readguy_driver: public LGFX_Sprite{ // readguy 基础类
     //template <class T> void t_display(T t);
 
 #if defined(ESP8266)
-#ifdef READGUY_ESP_ENABLE_WIFI
-    ESP8266WebServer sv;
-    ESP8266HTTPUpdateServer httpUpdater;
-    String w_ssid;
-    String w_psk;
-#endif
   //对于esp8266, 需要注册到ticker
     Ticker btnTask;
 #else
-#ifdef READGUY_ESP_ENABLE_WIFI
-    WebServer sv;
-    HTTPUpdateServer httpUpdater;
-#endif
 #ifdef DYNAMIC_PIN_SETTINGS
     //NVS数据操作函数, 无NVS的使用EEProm的最后几个字节块
     Preferences nvsData;
@@ -277,12 +277,18 @@ class readguy_driver: public LGFX_Sprite{ // readguy 基础类
     static TaskHandle_t btn_handle;
 #endif
 #ifdef READGUY_ESP_ENABLE_WIFI
+    ReadguyWebServer sv;
+    ReadguyUpdateServer httpUpdater;
+    String guy_notify=emptyString; //嵌入在网页中的自定义标语
+    int sfuncs=-1;
+    String* sfnames=nullptr;
+    String* sfevents=nullptr;
     void handleInit();      //服务器初始化系统(初次访问时, 跳转至引脚设定函数)
     void handleInitPost();  //服务器响应初始化请求
     void handlePinSetup();  //服务器-引脚设定函数
     void handleFinal();     //服务器-校验屏幕是否正常
     void handleFinalPost(); //服务器-校验屏幕是否正常回调函数
-    void handleWiFiPost();  //服务器-处理WiFi连接相关内容和API接口密钥功能
+    //void handleWiFi();//[已弃用]服务器-处理WiFi连接相关内容和API接口密钥功能
     void handleNotFound();  //服务器-404响应
 #endif
     //按键驱动部分
@@ -295,28 +301,17 @@ class readguy_driver: public LGFX_Sprite{ // readguy 基础类
 #ifdef READGUY_ESP_ENABLE_WIFI
     //static constexpr size_t EPD_DRIVERS_NUM_MAX = READGUY_SUPPORT_DEVICES;
     static const char *epd_drivers_list[EPD_DRIVERS_NUM_MAX];
+    static const PROGMEM char html_header[]; //HTML头的数据. 省内存, 能省一点是一点
     static const PROGMEM char index_cn_html[];
-    /*static const PROGMEM char index_cn_html1[];
     static const PROGMEM char index_cn_html2[];
     static const PROGMEM char index_cn_html3[];
-    static const PROGMEM char index_cn_html4[];
-    static const PROGMEM char index_cn_html5[];
-    static const PROGMEM char index_cn_html6[];
-    static const PROGMEM char index_cn_html7[];
-    static const PROGMEM char index_cn_html8[];
-    static const PROGMEM char index_cn_html9[];
-    static const PROGMEM char index_cn_html10[];
-    static const PROGMEM char index_cn_html11[];
-    static const PROGMEM char index_cn_html12[];
-    static const PROGMEM char index_cn_html13[];
-    static const PROGMEM char index_cn_html14[];
-    static const PROGMEM char index_cn_html15[]; */
     static const PROGMEM char index_cn_html16[];
     static const PROGMEM char verify_html[];
     static const PROGMEM char verify2_html[];
     static const PROGMEM char verifybtn_html[3][200];
     static const PROGMEM char final_html[];
-    static const PROGMEM char final2_html[];
+    static const PROGMEM char afterConfig_html[];
+    static const PROGMEM char home_html[];
     static const PROGMEM char end_html[];
     //static const PROGMEM uint8_t faviconData[1150];
 #endif
@@ -335,6 +330,31 @@ class readguy_driver: public LGFX_Sprite{ // readguy 基础类
       if(!spibz) epd_spi->endTransaction();
 #endif
     }
+  public: //增加了一些返回系统状态变量的函数, 它们是静态的, 而且不会对程序造成任何影响.
+    constexpr int getReadguyShareSpi() const { return config_data[1]; }
+    constexpr int getReadguyEpdType () const { return config_data[2]; } // 对应的epd驱动程序代号, -1为未指定
+        //显示驱动部分, 显示默认使用vspi (vspi也是默认SPI库的通道)
+    constexpr int getReadguyEpdMosi () const { return config_data[3]; } // 目标显示器的 MOSI 引脚
+    constexpr int getReadguyEpdSclk () const { return config_data[4]; } // 目标显示器的 SCLK 引脚
+    constexpr int getReadguyEpdCs   () const { return config_data[5]; } // 目标显示器的 CS   引脚
+    constexpr int getReadguyEpdDc   () const { return config_data[6]; } // 目标显示器的 DC   引脚
+    constexpr int getReadguyEpdRst  () const { return config_data[7]; } // 目标显示器的 RST  引脚
+    constexpr int getReadguyEpdBusy () const { return config_data[8]; } // 目标显示器的 BUSY 引脚
+        //sd卡驱动部分, 默认使用hspi (sd卡建议用hspi)
+    constexpr int getReadguySdMiso  () const { return config_data[9]; } // 目标sd卡的 MISO 引脚, sd_share_spi == 1 时无效
+    constexpr int getReadguySdMosi  () const { return config_data[10]; }// 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
+    constexpr int getReadguySdSclk  () const { return config_data[11]; }// 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
+    constexpr int getReadguySdCs    () const { return config_data[12]; }// 目标sd卡的 CS   引脚.
+    constexpr int getReadguyI2cSda  () const { return config_data[13]; }// 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
+    constexpr int getReadguyI2cScl  () const { return config_data[14]; }// 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
+        //按键驱动部分, 为负代表高触发, 否则低触发,
+        //注意, 这里的io编号是加1的, 即 1或-1 代表 gpio0 的低触发/高触发
+    constexpr int getReadguyBtn1Pin () const { return config_data[15]; } 
+    constexpr int getReadguyBtn2Pin () const { return config_data[16]; } 
+    constexpr int getReadguyBtn3Pin () const { return config_data[17]; } 
+    constexpr int getReadguyBlPin   () const { return config_data[18]; }//前置光接口引脚IO
+    constexpr int getReadguyRtcType () const { return config_data[19]; }//使用的RTC型号(待定, 还没用上)
+    constexpr int getButtonsCount   () const { return config_data[21]; } //按钮个数, 0-3都有可能
 };
 #endif /* END OF FILE. ReadGuy project.
 Copyright (C) 2023 FriendshipEnder. */

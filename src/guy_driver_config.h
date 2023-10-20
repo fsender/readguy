@@ -59,17 +59,42 @@
 
 //                                  ------------------ definations - 定义 -
 
-//#define INDEV_DEBUG 1 //debug专用, 正常开机从NVS读取引脚配置数据, 取消注释则每次开机需要重新配置
-#define DYNAMIC_PIN_SETTINGS //使用静态的数据 !!!注意:注释此选项编写的程序是不支持跨平台运行的!!!
-#define READGUY_ENABLE_WIFI //启用WIFI配网功能.必须先启用 #define DYNAMIC_PIN_SETTINGS
-#define READGUY_USE_LITTLEFS 1 //取消注释以使用LittleFS,注释则用SPIFFS
-#define BTN_LOOPTASK_STACK 1024 //ESP32按键服务任务的栈空间大小
-#define BTN_LOOPTASK_CORE_ID 0 //ESP32按键服务任务运行在哪个核心
-#define BTN_LOOPTASK_PRIORITY 4 //ESP32按键服务任务的优先级
-#define BTN_LOOPTASK_DELAY 10 //按键任务间隔多久调用一次,单位毫秒
-#define ESP8266_SPI_FREQUENCY 20000000 //使用ESP8266时, SPI速率
-#define ESP32_DISP_FREQUENCY 20000000 //使用ESP32且屏幕与SD卡用不同的SPI总线时,屏幕速率
-#define ESP32_SD_SPI_FREQUENCY 20000000 //注意ESP32在与SD卡共享SPI时,屏幕依据SD_SPI的速率
+/// @brief 使用静态的数据 !!!注意:注释此选项编写的程序是不支持跨平台运行的!!!
+/// @note 相比于禁用WiFi配网功能, 禁用此功能减少的flash并不多, 为保证程序可在不同屏幕上运行, 请不要注释此选项
+#define DYNAMIC_PIN_SETTINGS
+
+/// @brief 启用WIFI配网功能.必须先启用 #define DYNAMIC_PIN_SETTINGS. 此选项对 ESP32xx 会减少大量flash.
+#define READGUY_ENABLE_WIFI
+
+/// @brief 启用I2C功能. 可用于联网时钟, 温度计, 陀螺仪等外设. 目前暂不支持库内使用类似函数. 仅可以提供引脚定义
+#define READGUY_ENABLE_I2C
+
+/// @brief 使用LittleFS作为片上文件系统, 注释此行则用SPIFFS(功能少, 不好用)
+#define READGUY_USE_LITTLEFS 1
+
+/// @brief ESP32按键服务任务的栈空间大小, 不建议普通用户更改. 默认值1024字节. 小于此大小会使程序栈溢出.
+#define BTN_LOOPTASK_STACK 1024
+
+/// @brief ESP32按键服务任务运行在哪个核心. 通常运行在核心0上.
+#define BTN_LOOPTASK_CORE_ID 0
+
+/// @brief ESP32按键服务任务的优先级. 高于arduino默认任务即可
+#define BTN_LOOPTASK_PRIORITY 3
+
+/// @brief 按键任务间隔多久调用一次, 默认为20毫秒. 对于需要精确读取按钮的程序, 请酌情减小此数值
+#define BTN_LOOPTASK_DELAY 20
+
+/// @brief 使用ESP8266时, 屏幕和SD卡的SPI速率. 默认为20MHz.
+#define ESP8266_SPI_FREQUENCY 20000000
+
+/// @brief 使用ESP32且屏幕与SD卡用不同的SPI总线时, 驱动屏幕的SPI速率
+#define ESP32_DISP_FREQUENCY 20000000
+
+/// @brief ESP32驱动SD卡的速率. 当ESP32在与SD卡共享SPI时, 屏幕依据此处的速率.
+#define ESP32_SD_SPI_FREQUENCY 20000000
+
+/// @brief debug专用, 请保持处于注释状态. 正常开机从NVS读取引脚配置数据, 取消注释则每次开机需要重新配置
+//#define INDEV_DEBUG 1
 
 #ifndef DYNAMIC_PIN_SETTINGS
 #ifdef ESP8266
@@ -86,8 +111,9 @@
 #define READGUY_sd_miso  -1 // 目标sd卡的 MISO 引脚, sd_share_spi == 1 时无效
 #define READGUY_sd_mosi  -1 // 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
 #define READGUY_sd_sclk  -1 // 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
-
 #define READGUY_sd_cs     0 // 目标sd卡的 CS   引脚
+#define READGUY_i2c_sda  -1 // 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
+#define READGUY_i2c_scl  -1 // 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
     //按键驱动部分, 为负代表高触发, 否则低触发,
     //注意, 这里的io编号是加1的, 即 1或-1 代表 gpio0 的低触发/高触发
 #define READGUY_btn1    ( 5+1) //按键1,注意需要+1,这里示例已经加了 设置为负的来允许高电平触发
@@ -112,6 +138,8 @@
 #define READGUY_sd_mosi  15 // 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
 #define READGUY_sd_sclk  14 // 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
 #define READGUY_sd_cs    13 // 目标sd卡的 CS   引脚
+#define READGUY_i2c_sda  -1 // 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
+#define READGUY_i2c_scl  -1 // 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
 
     //按键驱动部分, 为负代表高触发, 否则低触发,
     //注意, 这里的io编号是加1的, 即 1或-1 代表 gpio0 的低触发/高触发

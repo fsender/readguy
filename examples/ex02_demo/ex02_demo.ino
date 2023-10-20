@@ -51,7 +51,7 @@
 #include <Arduino.h>    //arduino功能基础库. 在platformIO平台上此语句不可或缺
 #include "readguy.h" //包含readguy_driver 基础驱动库
 
-readguy_driver guy;//新建一个readguy对象, 用于显示驱动.
+ReadguyDriver guy;//新建一个readguy对象, 用于显示驱动.
 
 void drawLines(); //声明一个函数, 用于显示一些线条. 此函数在后面的程序中会用到的
 

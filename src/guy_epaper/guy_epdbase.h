@@ -86,7 +86,7 @@ public:
      *  @param gamma_on 是否对灰度值进行gamma校正(速度慢)
      *  @return uint32_t 颜色的灰度值
      */
-    static int greysc(int got){ return (int)((got&0xf8)*299+(((got>>11)&0x1c)|((got<<5)&0xe0))*587+((got&0x1f00)>>5)*114)/978; }
+    static int greysc(int c){return(((c>>3)&0x1F)*79+(((c<<3)+(c>>13))&0x3F)*76+((c>>8)&0x1F)*30)>>5;}
     void drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y); //分步完成灰度刷新
     void drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y);//省内存方式
     void drv_draw16grey_step(const uint8_t *buf, int step){ //分步完成灰度刷新

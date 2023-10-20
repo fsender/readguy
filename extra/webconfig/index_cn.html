@@ -8,38 +8,166 @@
 
 <body>
   <h1>readguy 设置页面</h1>
-  <p>感谢您使用ReadGuy. 现在将引脚配置输入到框内, 即可成功点亮屏幕.<br />点击<a href="/wifi">配置WiFi</a><br />点击<a href="/api">配置聚合数据API密钥</a><br /></p>
+  <p>感谢您使用ReadGuy. 现在将引脚配置输入到框内, 即可成功点亮屏幕.<br />点击<a href="/wifi">配置WiFi</a>
+    <br />点击<a href="/api">配置聚合数据API密钥</a><br />
+  </p>
+  <h2>引脚定义设定</h2>
   <form name="input" action="/verify" method="POST">
-    <h2>引脚定义设定</h2><input type="checkbox" name="share" value="1">墨水屏和SD卡共享SPI<br />E-paper 型号<select name="epdtype">
-      <option value="0" selected>1.54寸标准</option>
+    <script>
+      function bt() {
+        var a = document.getElementById("e").value;
+        if (a == 1) {
+          document.getElementById("et").value = 0;
+          document.getElementById("EpdMOSI").value = 23;
+          document.getElementById("EpdSCLK").value = 18;
+          document.getElementById("Epd_CS").value = 19;
+          document.getElementById("Epd_DC").value = 16;
+          document.getElementById("Epd_RST").value = 4;
+          document.getElementById("EpdBusy").value = 13;
+          document.getElementById("SD_MISO").value = 2;
+          document.getElementById("SD_MOSI").value = 15;
+          document.getElementById("SD_SCLK").value = 14;
+          document.getElementById("SD_CS").value = 26;
+          document.getElementById("btn_cnt").value = 3;
+          document.getElementById("btn1").value = 32;
+          document.getElementById("btn2").value = 33;
+          document.getElementById("btn3").value = 25;
+          document.getElementById("bklight").value = -1;
+          document.getElementById("I2C_SDA").value = 21;
+          document.getElementById("I2C_SCL").value = 22; 
+        } 
+        if (a == 2) {
+          document.getElementById("et").value = 11;
+          document.getElementById("EpdMOSI").value = 23;
+          document.getElementById("EpdSCLK").value = 18;
+          document.getElementById("Epd_CS").value = 14;
+          document.getElementById("Epd_DC").value = 27;
+          document.getElementById("Epd_RST").value = 33;
+          document.getElementById("EpdBusy").value = -1;
+          document.getElementById("SD_MISO").value = 19;
+          document.getElementById("SD_MOSI").value = 23;
+          document.getElementById("SD_SCLK").value = 18;
+          document.getElementById("SD_CS").value = 4;
+          document.getElementById("btn_cnt").value = 3;
+          document.getElementById("btn1").value = 39;
+          document.getElementById("btn2").value = 38;
+          document.getElementById("btn3").value = 37;
+          document.getElementById("bklight").value = 32;
+          document.getElementById("I2C_SDA").value = 21;
+          document.getElementById("I2C_SCL").value = 22;
+        }
+        if (a == 3) {
+          document.getElementById("et").value = 0;
+          document.getElementById("EpdMOSI").value = 14;
+          document.getElementById("EpdSCLK").value = 13;
+          document.getElementById("Epd_CS").value = 15;
+          document.getElementById("Epd_DC").value = 27;
+          document.getElementById("Epd_RST").value = 26;
+          document.getElementById("EpdBusy").value = 25;
+          document.getElementById("SD_MISO").value = -1;
+          document.getElementById("SD_MOSI").value = -1;
+          document.getElementById("SD_SCLK").value = -1;
+          document.getElementById("SD_CS").value = -1;
+          document.getElementById("btn_cnt").value = 1;
+          document.getElementById("btn1").value = 0;
+          document.getElementById("btn2").value = -1;
+          document.getElementById("btn3").value = -1;
+          document.getElementById("bklight").value = -1;
+          document.getElementById("I2C_SDA").value = -1;
+          document.getElementById("I2C_SCL").value = -1;
+        }
+        if (a == 4) {
+          document.getElementById("et").value = 1;
+          document.getElementById("EpdMOSI").value = 23;
+          document.getElementById("EpdSCLK").value = 18;
+          document.getElementById("Epd_CS").value = 5;
+          document.getElementById("Epd_DC").value = 19;
+          document.getElementById("Epd_RST").value = 27;
+          document.getElementById("EpdBusy").value = 38;
+          document.getElementById("SD_MISO").value = 2;
+          document.getElementById("SD_MOSI").value = 15;
+          document.getElementById("SD_SCLK").value = 14;
+          document.getElementById("SD_CS").value = 13;
+          document.getElementById("btn_cnt").value = 2;
+          document.getElementById("btn1").value = 32;
+          document.getElementById("btn2").value = 36;
+          document.getElementById("btn3").value = -1;
+          document.getElementById("bklight").value = 12;
+          document.getElementById("I2C_SDA").value = 25;
+          document.getElementById("I2C_SCL").value = 26;
+        }
+        if (a == 5) {
+          document.getElementById("et").value = 5;
+          document.getElementById("EpdMOSI").value = 23;
+          document.getElementById("EpdSCLK").value = 18;
+          document.getElementById("Epd_CS").value = 5;
+          document.getElementById("Epd_DC").value = 17;
+          document.getElementById("Epd_RST").value = 16;
+          document.getElementById("EpdBusy").value = 4;
+          document.getElementById("SD_MISO").value = 2;
+          document.getElementById("SD_MOSI").value = 15;
+          document.getElementById("SD_SCLK").value = 14;
+          document.getElementById("SD_CS").value = 13;
+          document.getElementById("btn_cnt").value = 3;
+          document.getElementById("btn1").value = 37;
+          document.getElementById("btn2").value = 38;
+          document.getElementById("btn3").value = 39;
+          document.getElementById("bklight").value = -1;
+          document.getElementById("I2C_SDA").value = -1;
+          document.getElementById("I2C_SCL").value = -1;
+        }
+      }
+      function ct() {
+        document.getElementById("e").value = 0;
+      }
+    </script>
+    <select id="e" name="epdTemplate" onchange="bt()">
+      <option value="0" selected>自定义线序</option>
+      <option value="1">甘草MP3播放器</option>
+      <option value="2">M5Stack-Core</option>
+      <option value="3">微雪官方开发板</option>
+      <option value="4">LilyGo T-Watch墨水屏</option>
+      <option value="5">LilyGo T5开发板</option>
+    </select><br /><input type="checkbox" name="share" value="1">墨水屏和SD卡共享SPI<br
+      />E-paper 型号<select id="et" onchange="ct()" name="epdtype">
+      <option value="0">1.54寸标准</option>
       <option value="1">1.54寸Lilygo</option>
       <option value="2">2.13寸汉朔价签</option>
-      <option value="3">2.66寸Vusion价签</option>
-      <option value="4">2.13寸三色</option>
-      <option value="5">2.9寸A01</option>
-      <option value="6">2.9寸T94背光</option>
-      <option value="7">4.2寸WF丝印</option>
-      <option value="8">4.2寸HINK黑白价签</option>
-      <option value="9">3.7寸高DPI墨水屏</option>
-      <option value="10">测试用LCD屏 请勿选此项</option>
-      <option value="11">2.7寸佳显触摸墨水屏</option>
-    </select><br />Epd_CS<input type="number" name="Epd_CS" min="-1" max="100" step="1" value="15" /><br />
-    Epd_DC<input type="number" name="Epd_DC" min="-1" max="100" step="1" value="5" /><br />
-    Epd_RST<input type="number" name="Epd_RST" min="-1" max="100" step="1" value="-1" /><br />
-    EpdBusy<input type="number" name="EpdBusy" min="-1" max="100" step="1" value="4" /><br />
-    SD_CS<input type="number" name="SD_CS" min="-1" max="100" step="1" value="0" /><br />
-    几个按键?<br /><input type="number" name="btn_cnt" min="1" max="3" step="1" value="3" /><br />
-    按键 1 引脚<input type="number" name="btn1" min="-1" max="100" step="1" value="5" /><br />
-    <input type="checkbox" name="btn1c" value="1">高电平触发<br />
-    按键 2 引脚<input type="number" name="btn2" min="-1" max="100" step="1" value="12" /><br />
-    <input type="checkbox" name="btn2c" value="1">高电平触发<br />
-    按键 3 引脚<input type="number" name="btn3" min="-1" max="100" step="1" value="2" /><br />
-    <input type="checkbox" name="btn3c" value="1">高电平触发<br />
-    背光 PWM 引脚<input type="number" name="bklight" min="-1" max="100" step="1" value="-1" /><br />
-    <input type='submit' value='确定!' /><br />
+      <option value="3">2.13寸三色</option>
+      <option value="4">2.66寸Vusion价签</option>
+      <option value="5">2.7寸佳显触摸墨水屏</option>
+      <option value="6">2.9寸A01</option>
+      <option value="7">2.9寸T94背光</option>
+      <option value="8">3.7寸高DPI墨水屏</option>
+      <option value="9">4.2寸HINK黑白价签</option>
+      <option value="10">4.2寸WF丝印</option>
+      <option value="11">测试用LCD屏 请勿选此项</option>
+    </select><br
+      />EpdMOSI<input type="number" id="EpdMOSI" onchange="ct()" name="EpdMOSI" min="-1" max="99" step="1" value="-1" /><br
+      />EpdSCLK<input type="number" id="EpdSCLK" onchange="ct()" name="EpdSCLK" min="-1" max="99" step="1" value="-1" /><br
+      />Epd_CS<input type="number" id="Epd_CS" onchange="ct()" name="Epd_CS" min="-1" max="99" step="1" value="-1" /><br
+      />Epd_DC<input type="number" id="Epd_DC" onchange="ct()" name="Epd_DC" min="-1" max="99" step="1" value="-1" /><br
+      />Epd_RST<input type="number" id="Epd_RST" onchange="ct()" name="Epd_RST" min="-1" max="99" step="1" value="-1" /><br
+      />EpdBusy<input type="number" id="EpdBusy" onchange="ct()" name="EpdBusy" min="-1" max="99" step="1" value="-1" /><br
+      />SD_MISO<input type="number" id="SD_MISO" onchange="ct()" name="SD_MISO" min="-1" max="99" step="1" value="-1" /><br
+      />SD_MOSI<input type="number" id="SD_MOSI" onchange="ct()" name="SD_MOSI" min="-1" max="99" step="1" value="-1" /><br
+      />SD_SCLK<input type="number" id="SD_SCLK" onchange="ct()" name="SD_SCLK" min="-1" max="99" step="1" value="-1" /><br
+      />SD_CS<input type="number" id="SD_CS" onchange="ct()" name="SD_CS" min="-1" max="99" step="1" value="-1" /><br
+      />I2C_SDA<input type="number" id="I2C_SDA" onchange="ct()" name="I2C_SDA" min="-1" max="99" step="1" value="-1" /><br
+      />I2C_SCL<input type="number" id="I2C_SCL" onchange="ct()" name="I2C_SCL" min="-1" max="99" step="1" value="-1" /><br
+      />几个按键?<input type="number" id="btn_cnt" onchange="ct()" name="btn_cnt" min="1" max="3" step="1" value="1" /><br
+      />按键 1 引脚<input type="number" id="btn1" onchange="ct()" name="btn1" min="-1" max="99" step="1" value="-1" />
+      <input type="checkbox" onchange="ct()" name="btn1c" value="1">高电平触发<br
+      />按键 2 引脚<input type="number" id="btn2" onchange="ct()" name="btn2" min="-1" max="99" step="1" value="-1" />
+      <input type="checkbox" onchange="ct()" name="btn2c" value="1">高电平触发<br
+      />按键 3 引脚<input type="number" id="btn3" onchange="ct()" name="btn3" min="-1" max="99" step="1" value="-1" />
+      <input type="checkbox" onchange="ct()" name="btn3c" value="1">高电平触发<br
+      />背光 PWM 引脚<input type="number" id="bklight" onchange="ct()" name="bklight" min="-1" max="99" step="1" value="-1" /><br
+      /><input type='submit' value='OK!' /><br />
   </form><br />
-  <p>ReadGuy on device ESP8266<br />Copyright © FriendshipEnder <a href="https://github.com/fsender/readguy">GitHub</a>
-    <a href="https://space.bilibili.com/180327370/">Bilibili</a><br />版本: 1.0.0 ,编译日期: Sep 20 202318:17:07</p>
+  <p>ReadGuy on device ESP32<br />Copyright © FriendshipEnder <a
+    href="https://github.com/fsender/readguy">GitHub</a> <a
+    href="https://space.bilibili.com/180327370">Bilibili</a><br />版本: 1.2.0 ,编译日期: Sep 28 2023 23:37:58</p>
 </body>
 
 </html>

@@ -228,7 +228,7 @@ void drv_base::drv_draw16grey_step(std::function<uint8_t(int)> f, int step){
   if(step==1){
     greyHQ=3;
     drv_setDepth(3);
-    drv_fullpart(1); //开始局刷
+    drv_fullpart(1); //开始快刷
   }
   if(step==3) drv_setDepth(2);
   if(step==5) drv_setDepth(1);

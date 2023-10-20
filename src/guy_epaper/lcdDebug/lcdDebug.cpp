@@ -78,8 +78,6 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
     }
     yield();
   }
-  //ips.readPixel(i,j);
-  DelayMs(150);
 }
 void drv::drv_sleep() {}
 }

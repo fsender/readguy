@@ -4,7 +4,7 @@
  * 项目交流QQ群: 926824162 (萌新可以进来问问题的哟)
  * 郑重声明: 未经授权还请不要商用本开源项目编译出的程序.
  * 
- * @file ex03_1_u8g2font.ino
+ * @file 1_u8g2font.ino
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
  * @version 1.0
  * @date 2023-09-19
@@ -53,7 +53,7 @@
 
 #include "ctg_u8g2_wqy12.h" //中文字体库
 
-readguy_driver guy;//新建一个readguy对象, 用于显示驱动.
+ReadguyDriver guy;//新建一个readguy对象, 用于显示驱动.
 
 extern const uint8_t ctg_wqy9pt_chinese1[]; //声明中文字体文件
 

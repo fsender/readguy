@@ -32,37 +32,35 @@
 #define INPUT_PULLDOWN INPUT
 #endif
 
-guy_button readguy_driver::btn_rd[3];
-int8_t readguy_driver::pin_cmx=-1;
+guy_button ReadguyDriver::btn_rd[3];
+int8_t ReadguyDriver::pin_cmx=-1;
 
-const PROGMEM char readguy_driver::projname[8] = "readguy";
-const PROGMEM char readguy_driver::tagname[9] = "hwconfig";
-volatile uint8_t readguy_driver::spibz=0;
+const PROGMEM char ReadguyDriver::projname[8] = "readguy";
+const PROGMEM char ReadguyDriver::tagname[7] = "hwconf";
+volatile uint8_t ReadguyDriver::spibz=0;
 #ifndef ESP8266
-SPIClass *readguy_driver::sd_spi =nullptr;
-SPIClass *readguy_driver::epd_spi=nullptr;
-TaskHandle_t readguy_driver::btn_handle;
+SPIClass *ReadguyDriver::sd_spi =nullptr;
+SPIClass *ReadguyDriver::epd_spi=nullptr;
+TaskHandle_t ReadguyDriver::btn_handle;
 #endif
 
-readguy_driver::readguy_driver(){
+ReadguyDriver::ReadguyDriver(){
   READGUY_cali = 0; // config_data[0] 的初始值为0
   READGUY_sd_ok = 0; //初始默认SD卡未成功初始化
   READGUY_buttons = 0; //初始情况下没有按钮
 }
-uint8_t readguy_driver::init(){
+uint8_t ReadguyDriver::init(uint8_t WiFiSet){ //WiFiSet: 是否保持AP服务器一直处于打开状态
   if(READGUY_cali==127) //已经初始化过了一次了, 为了防止里面一些volatile的东西出现问题....还是退出吧
     return 0;
 #ifdef DYNAMIC_PIN_SETTINGS
-  //char config_data[18];
   nvs_init();
 #if (!defined(INDEV_DEBUG))
   if(!nvs_read()){  //如果NVS没有录入数据, 需要打开WiFiAP模式初始化录入引脚数据
 #endif
 #ifdef READGUY_ESP_ENABLE_WIFI
-    //开启WiFi和服务器, 然后网页获取数据
-    //以下代码仅供测试
-    ap_setup();
-    server_setup();
+    ap_setup();    //开启WiFi和服务器, 然后网页获取数据. 如果保持WiFi AP模式打开, 则显示此标语.
+    if(WiFiSet) server_setup(F("引脚配置完成。请稍后访问<a href=\"/\">此页面</a>浏览更多内容。"));
+    else server_setup(F("引脚配置完成, WiFi即将关闭。")); //直接进入主页.
     for(uint32_t i=UINT32_MAX;millis()<i;){
       if(server_loop()){
         if(i==UINT32_MAX) i=millis()+500;
@@ -71,15 +69,14 @@ uint8_t readguy_driver::init(){
     }
     //delay(300); //等待网页加载完再关掉WiFi. (有没有用存疑)
     server_end();
-    WiFi.mode(WIFI_OFF);
+    if(!WiFiSet) WiFi.mode(WIFI_OFF);
     fillScreen(1);
 #endif
 #if (!defined(INDEV_DEBUG))
   }
   else{ //看来NVS有数据, //从NVS加载数据, 哪怕前面的数据刚刚写入, 还没读取
-    //for(unsigned int i=0;i<sizeof(config_data);i++){
-    //  Serial.printf_P(PSTR("data %u: %d\n"),i,config_data[i]);
-    //}
+    if(WiFiSet>=2) WiFi.begin(); //连接到上次存储在flash NVS中的WiFi.
+    else if(WiFiSet==1) ap_setup();
     if(checkEpdDriver()!=127) setEpdDriver();  //初始化屏幕
     else for(;;); //此处可能添加程序rollback等功能操作(比如返回加载上一个程序)
     setSDcardDriver();
@@ -97,7 +94,7 @@ uint8_t readguy_driver::init(){
   READGUY_cali=127;
   return READGUY_sd_ok;
 }
-uint8_t readguy_driver::checkEpdDriver(){
+uint8_t ReadguyDriver::checkEpdDriver(){
 #ifdef DYNAMIC_PIN_SETTINGS
 #ifdef ESP8266
 #define TEST_ONLY_VALUE 5
@@ -155,7 +152,6 @@ uint8_t readguy_driver::checkEpdDriver(){
       Serial.println(F("[ERR] EPD DRIVER IC NOT SUPPORTED!\n"));
       return 127;
   }
-  // this calls the peripheral hardware interface, see epdif      初始化硬件SPI层(HAL层)
 #if (defined(ESP8266))
   SPI.begin();
   SPI.setFrequency(ESP8266_SPI_FREQUENCY); ///< 1MHz
@@ -176,7 +172,7 @@ uint8_t readguy_driver::checkEpdDriver(){
   Serial.println(F("IfInit OK"));
   return READGUY_epd_type;
 }
-void readguy_driver::setEpdDriver(){
+void ReadguyDriver::setEpdDriver(){
   guy_dev->spi_tr_release = in_release;
   guy_dev->spi_tr_press   = in_press;
   guy_dev->drv_init(); //初始化epd驱动层
@@ -195,7 +191,7 @@ void readguy_driver::setEpdDriver(){
   setTextColor(0);
   fillScreen(1); //开始先全屏白色
 }
-bool readguy_driver::setSDcardDriver(){
+bool ReadguyDriver::setSDcardDriver(){
   /*重要信息: 有些引脚冲突是难以避免的, 比如8266 尤其需要重写这部分代码
     对于esp32也要注意这个引脚是否是一个合法的引脚
     对于esp8266真的要重写, 比如esp8266需要允许某些引脚是可以复用的
@@ -235,7 +231,7 @@ bool readguy_driver::setSDcardDriver(){
   }
   return READGUY_sd_ok;
 }
-void readguy_driver::setButtonDriver(){
+void ReadguyDriver::setButtonDriver(){
   if(READGUY_btn1) { //初始化按键. 注意高电平触发的引脚在初始化时要设置为下拉
     int8_t btn_pin=abs(READGUY_btn1)-1;
 #if defined(ESP8266) //只有ESP8266是支持16引脚pulldown功能的, 而不支持pullup
@@ -339,7 +335,7 @@ void readguy_driver::setButtonDriver(){
     }
   }  //关于按键策略, 我们在此使用多个Button2的类, 然后在一个task共享变量来确定上一个按键状态
 }
-fs::FS &readguy_driver::guyFS(uint8_t initSD){
+fs::FS &ReadguyDriver::guyFS(uint8_t initSD){
   if(initSD==2 || (!READGUY_sd_ok && initSD)) setSDcardDriver();
   if(READGUY_sd_ok){
 #ifdef ESP8266
@@ -354,7 +350,7 @@ fs::FS &readguy_driver::guyFS(uint8_t initSD){
   return SPIFFS;
 #endif
 }
-void readguy_driver::setBright(int d){
+void ReadguyDriver::setBright(int d){
   if(currentBright>=0 && d>=0 && d<=255){
     currentBright=d;
 #ifdef ESP8266
@@ -368,7 +364,7 @@ void readguy_driver::setBright(int d){
     digitalWrite(READGUY_bl_pin,d?HIGH:LOW);
   }
 }
-void readguy_driver::display(bool part){
+void ReadguyDriver::display(bool part){
   //真的是我c++的盲区了啊....搜索了半天才找到可以这么玩的
   //......可惜'dynamic_cast' not permitted with -fno-rtti
   // static bool _part = 0; 记忆上次到底是full还是part, 注意启动时默认为full
@@ -379,7 +375,7 @@ void readguy_driver::display(bool part){
     //in_release(); //恢复
   }
 }
-void readguy_driver::display(std::function<uint8_t(int)> f, bool part){
+void ReadguyDriver::display(std::function<uint8_t(int)> f, bool part){
   if(READGUY_cali==127){
     //in_press(); //暂停, 然后读取按键状态 spibz
     guy_dev->drv_fullpart(part);
@@ -387,106 +383,113 @@ void readguy_driver::display(std::function<uint8_t(int)> f, bool part){
     //in_release(); //恢复
   }
 }
-void readguy_driver::drawImage(LGFX_Sprite &spr,uint16_t x,uint16_t y) { 
+void ReadguyDriver::drawImage(LGFX_Sprite &spr,uint16_t x,uint16_t y) { 
   if(READGUY_cali==127) guy_dev->drv_drawImage(*this, spr, x, y); 
 }
-void readguy_driver::setDepth(uint8_t d){ 
+void ReadguyDriver::setDepth(uint8_t d){ 
   if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling()) guy_dev->drv_setDepth(d); 
 }
-void readguy_driver::draw16grey(LGFX_Sprite &spr,uint16_t x,uint16_t y){
+void ReadguyDriver::draw16grey(LGFX_Sprite &spr,uint16_t x,uint16_t y){
   if(READGUY_cali!=127) return;
   if(guy_dev->drv_supportGreyscaling() && (spr.getColorDepth()&0xff)>1)
     return guy_dev->drv_draw16grey(*this,spr,x,y);
   guy_dev->drv_drawImage(*this, spr, x, y);
 }
-void readguy_driver::draw16greyStep(int step){
+void ReadguyDriver::draw16greyStep(int step){
   if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling())
     return guy_dev->drv_draw16grey_step((const uint8_t *)this->getBuffer(),step);
 }
-void readguy_driver::draw16greyStep(std::function<uint8_t(int)> f, int step){
+void ReadguyDriver::draw16greyStep(std::function<uint8_t(int)> f, int step){
   if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling())
     return guy_dev->drv_draw16grey_step(f,step);
 }
-void readguy_driver::invertDisplay(){
+void ReadguyDriver::invertDisplay(){
   if(READGUY_cali==127){
     const int pixels=((guy_dev->drv_width()+7)>>3)*guy_dev->drv_height();
     for(int i=0;i<pixels;i++)
       ((uint8_t*)(getBuffer()))[i]=uint8_t(~(((uint8_t*)(getBuffer()))[i]));
   }
 }
-void readguy_driver::sleepEPD(){
+void ReadguyDriver::sleepEPD(){
   if(READGUY_cali==127) guy_dev->drv_sleep();
 }
 
 #if (!defined(DYNAMIC_PIN_SETTINGS)) //do nothing here.
 #elif (defined(INDEV_DEBUG))
-void readguy_driver::nvs_init(){
+void ReadguyDriver::nvs_init(){
 }
-void readguy_driver::nvs_deinit(){
+void ReadguyDriver::nvs_deinit(){
 }
-bool readguy_driver::nvs_read(){
+bool ReadguyDriver::nvs_read(){
   return 1;
 }
-void readguy_driver::nvs_write(){
+void ReadguyDriver::nvs_write(){
 }
 #elif (defined(ESP8266))
-void readguy_driver::nvs_init(){
-  EEPROM.begin(128);
+void ReadguyDriver::nvs_init(){
+  EEPROM.begin(32);
 }
-void readguy_driver::nvs_deinit(){
+void ReadguyDriver::nvs_deinit(){
   EEPROM.commit();
   EEPROM.end();
 }
-bool readguy_driver::nvs_read(){
+bool ReadguyDriver::nvs_read(){
   char s[8];
   for(unsigned int i=0;i<sizeof(config_data)+8;i++){
-    int8_t rd=(int8_t)EEPROM.read(100+i);
+    int8_t rd=(int8_t)EEPROM.read(2+i);
     if(i>=8) config_data[i-8] = rd;
     else s[i]=(char)rd;
   }
   Serial.printf("Get NVS...%d\n", config_data[0]);
   return !(strcmp_P(s,projname));
 }
-void readguy_driver::nvs_write(){
+void ReadguyDriver::nvs_write(){
   for(unsigned int i=0;i<sizeof(config_data)+8;i++){
-    EEPROM.write(100+i,(uint8_t)(i<8?pgm_read_byte(projname+i):config_data[i-8]));
+    EEPROM.write(2+i,(uint8_t)(i<8?pgm_read_byte(projname+i):config_data[i-8]));
   }
 }
 #else
-void readguy_driver::nvs_init(){
+void ReadguyDriver::nvs_init(){
   nvsData.begin(projname);  //初始化NVS
 }
-void readguy_driver::nvs_deinit(){
+void ReadguyDriver::nvs_deinit(){
   nvsData.end(); //用完NVS记得关闭, 省内存
 }
-bool readguy_driver::nvs_read(){
-  bool suc = nvsData.isKey(tagname);
-  if(suc) nvsData.getBytes(tagname,config_data,sizeof(config_data));
-  return suc;
+bool ReadguyDriver::nvs_read(){ //此处需要处理一些有关I2C的内容
+  if(!nvsData.isKey(tagname)) return 0; //没有这个键值
+  size_t len=nvsData.getBytes(tagname,config_data,sizeof(config_data)); //读取的数据长度
+  /*if(len<sizeof(config_data)){ //旧版本格式无法获取I2C相关数据, 设置为-1.
+    for(int i=sizeof(config_data)-1;i>=15;i--)    //使用新版本格式来存储相关数据
+      config_data[i]=config_data[i-2];
+    READGUY_i2c_sda=-1;
+    READGUY_i2c_scl=-1;
+    nvsData.putBytes(tagname,config_data,sizeof(config_data)); //用新版本格式保存
+  }*/
+  return len==sizeof(config_data);
 }
-void readguy_driver::nvs_write(){
+void ReadguyDriver::nvs_write(){
   if(nvsData.isKey(tagname)) nvsData.remove(tagname);
   nvsData.putBytes(tagname,config_data,sizeof(config_data)); //正式写入NVS
 }
 #endif
 
-uint8_t readguy_driver::getBtn_impl(){ //按钮不可用, 返回0.
+uint8_t ReadguyDriver::getBtn_impl(){ //按钮不可用, 返回0.
   uint8_t res1,res2,res3,res4=0;
   switch(READGUY_buttons){
     case 1:
       res1=btn_rd[0].read();
-      if(res1 == 1) res4 |= 1;
-      else if(res1 == 2) res4 |= 2;
-      else if(res1 == 4) res4 |= 4;
-      else if(res1 == 3) res4 |= 8;
+      if(res1 == 1) res4 |= 1; //点按
+      else if(res1 == 2) res4 |= 2; //双击
+      else if(res1 == 4) res4 |= 4; //长按-确定
+      else if(res1 == 3) res4 |= 8; //三击-返回
       break;
     case 2:
-      res1=btn_rd[0].read();
+      res1=btn_rd[0].read(); //两个按钮引脚都读取
       res2=btn_rd[1].read();
-      if(res1 == 1) res4 |= 1;
-      else if(res1 == 4) res4 |= 2;
-      if(res2 == 1) res4 |= 4;
-      else if(res2 == 4) res4 |= 8;
+      if(res1 == 1) res4 |= 1;      //左键点按-向下翻页
+      else if(res1 == 4) res4 |= 2; //左键长按-向上翻页
+      if(res2 == 1) res4 |= 4;      //右键点按-确定
+      else if(res2 == 4) res4 |= 8; //右键长按-返回
       break;
     case 3:
       res1=btn_rd[0].read();
@@ -500,20 +503,20 @@ uint8_t readguy_driver::getBtn_impl(){ //按钮不可用, 返回0.
   }
   return res4;
 }
-void readguy_driver::looptask(){ //均为类内静态数据
+void ReadguyDriver::looptask(){ //均为类内静态数据
   btn_rd[0].loop();
   btn_rd[1].loop();
   btn_rd[2].loop();
 }
 
-uint8_t readguy_driver::rd_btn_f(uint8_t btn){
+uint8_t ReadguyDriver::rd_btn_f(uint8_t btn){
   static uint8_t lstate=0; //上次从dc引脚读到的电平
 #ifdef ESP8266
-  if(btn==readguy_driver::pin_cmx && spibz) return lstate;
-  if(btn==D5||btn==D6||btn==D7||btn==readguy_driver::pin_cmx) 
+  if(btn==ReadguyDriver::pin_cmx && spibz) return lstate;
+  if(btn==D5||btn==D6||btn==D7||btn==ReadguyDriver::pin_cmx) 
     pinMode(btn,INPUT_PULLUP);//针对那些复用引脚做出的优化
   uint8_t readb = digitalRead(btn);
-  if(btn==readguy_driver::pin_cmx) {
+  if(btn==ReadguyDriver::pin_cmx) {
     //Serial.printf("rd D1.. %d\n",spibz);
     pinMode(btn,OUTPUT); //如果有复用引脚, 它们的一部分默认需要保持输出状态, 比如复用的DC引脚
     digitalWrite(btn,HIGH);    //这些引脚的默认电平都是高电平
@@ -522,7 +525,7 @@ uint8_t readguy_driver::rd_btn_f(uint8_t btn){
   else if(btn==D5||btn==D6||btn==D7) pinMode(btn,SPECIAL); //针对SPI引脚进行专门的优化
   return readb;
 #else //ESP32不再允许SPI相关引脚复用
-  if(btn!=readguy_driver::pin_cmx)
+  if(btn!=ReadguyDriver::pin_cmx)
     return digitalRead(btn);
   if(spibz) return lstate;
   pinMode(btn,INPUT_PULLUP);

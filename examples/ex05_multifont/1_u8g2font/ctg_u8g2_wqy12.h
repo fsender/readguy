@@ -3,12 +3,12 @@
  * 如果有条件请到 extra/artset/reward 中扫描打赏,否则请在 Bilibili 上支持我.
  * 项目交流QQ群: 926824162 (萌新可以进来问问题的哟)
  * 郑重声明: 未经授权还请不要商用本开源项目编译出的程序.
- * @file guy_version.h
+ * 
+ * @file ctg_u8g2_wqy12.h
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
- * @brief readguy 版本控制文件.
  * @version 1.0
- * @date 2023-09-21
-
+ * @date 2023-09-24
+ * @brief ReadGuy示例字体文件
  * @attention
  * Copyright (c) 2022-2023 FriendshipEnder
  * 
@@ -25,36 +25,18 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
  */
-
-#ifndef _READGUY_VERSION_H_FILE
-#define _READGUY_VERSION_H_FILE
-
-#define READGUY_V_MAJOR 1
-#define READGUY_V_MINOR 1
-#define READGUY_V_PATCH 1
-#define READGUY_VERSION_VAL (READGUY_V_MAJOR*1000+READGUY_V_MINOR*100+READGUY_V_PATCH*10)
-#define READGUY_VERSION "1.1.1"
-
-#ifdef ESP8266
-#define _READGUY_PLATFORM "ESP8266"
-#else
-#ifdef CONFIG_IDF_TARGET_ESP32
-#define _READGUY_PLATFORM "ESP32"
-#elif defined(CONFIG_IDF_TARGET_ESP32S2)
-#define _READGUY_PLATFORM "ESP32S2"
-#elif defined(CONFIG_IDF_TARGET_ESP32S3)
-#define _READGUY_PLATFORM "ESP32S3"
-#elif defined(CONFIG_IDF_TARGET_ESP32C3)
-#define _READGUY_PLATFORM "ESP32C3"
-#else
-#define _READGUY_PLATFORM "Unknown"
+#ifndef _CTG_U8G2_WQY12_H_FILE
+#define _CTG_U8G2_WQY12_H_FILE
+#include <Arduino.h>
+#include <pgmspace.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern const uint8_t ctg_u8g2_wqy12_chinese1[14241] ;
+extern const uint8_t ctg_u8g2_wqy12[626234] ;
+#ifdef __cplusplus
+}
 #endif
 #endif
-
-#define _GITHUB_LINK      "github.com/fsender/readguy"
-#define _BILIBILI_LINK    "www.bilibili.com/video/BV1f94y187wz"
-
-
-#endif /* END OF FILE. ReadGuy project.
-Copyright (C) 2023 FriendshipEnder. */

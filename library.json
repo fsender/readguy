@@ -11,13 +11,15 @@
     "type": "git",
     "url": "https://github.com/fsender/readguy"
   },
-  "version": "1.1.0",
+  "version": "1.1.1",
   "frameworks": "arduino",
   "platforms": ["espressif32", "espressif8266"],
   "headers": "readguy.h",
   "build": {
     "libArchive": false
   },
+  "license": "Apache-2.0",
+  "homepage": "b站视频",
   "dependencies": {
       "name": "lovyan03/LovyanGFX",
       "version": ">=1.1.9"

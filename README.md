@@ -1,10 +1,12 @@
 # readguy 自由的墨水屏阅读器驱动库
 
+[![arduino-library-badge](https://www.ardu-badge.com/badge/readguy.svg?)](https://www.ardu-badge.com/readguy)
+
 <img src="extra/artset/readguy_theme3.png" width="30%" height="auto">
 
-**版本1.0.2正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
+**版本1.1.1正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
 
-欢迎克隆, 项目交流QQ群: 926824162 (萌新可以进来问问题的哟), 项目的 Bilibili 主页: 
+欢迎克隆, 项目交流QQ群: 926824162 (萌新可以进来问问题的哟), 项目的 Bilibili 主页: [BV1f94y187wz](https://www.bilibili.com/video/BV1f94y187wz/) 记得三连+关注我这个宝藏up主哦~
 
 注意, 有问题一定要先加群问, 先不要提issue, 提了小影 *(也就是作者FriendshipEnder)* 也不会看的.
 
