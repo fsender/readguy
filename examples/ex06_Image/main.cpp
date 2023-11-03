@@ -78,6 +78,7 @@ void setup(){
   Serial.begin(115200); //初始化串口
 
   guy.init(); //初始化readguy_driver 基础驱动库.
+  guy.setRotation(3); //设置旋转. 旋转属性不会影响图片显示的所有功能
 
 // 2 - 显示图片 方式1    --------------------- 2 - 显示图片 方式1:使用readguy提供的drawImage方法. ------<<
 

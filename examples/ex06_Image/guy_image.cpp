@@ -44,26 +44,50 @@ uint8_t readguyImage::drawImgHandler(int r, LGFX_Sprite *spr){
     spr->fillScreen(background?0xffff:0); //背景色填充白色
 
     //spr->drawBmp(*baseFs,filename,x,y,std::min(w,spr->width()),std::min(h,_h),
-      //offsetx,offsety,scalex,scaley,datum);
-    int yr=y-r/stage*_h;
-    if(yr<_h){
-      int yd=0;
-      if(yr<0){
-        yd=-yr;
-        yr=0;
-      }
-      switch(format&3){
-        case 1:
-          spr->drawBmpFile(*baseFs,filename,x,yr,0,0,offsetx,offsety+yd,scalex,scaley,datum);
-          break;
-        case 2:
-          spr->drawPngFile(*baseFs,filename,x,yr,0,0,offsetx,offsety+yd,scalex,scaley,datum);
-          break;
-        case 3:
-          spr->drawJpgFile(*baseFs,filename,x,yr,0,0,offsetx,offsety+yd,scalex,scaley,datum);
-          break;
-      }
+      //offsetx,offsety,scalex,scaley);
+    int _x=0,_y=0,xd=0,yd=0;
+    uint8_t rot = guy->getRotation();
+    //uint8_t td=lgfx::v1::TL_DATUM; //top left for default
+    switch(rot){
+      case 0: 
+      _x=x; xd=0;
+      _y=y-r/stage*_h;
+      if(_y<0){ yd=-_y; _y=0; }
+      break;
+      case 1: 
+      //旋转之后, sprite为竖条. spr的width为_h. height为widthDiv8<<3(原sprite宽度)
+      //输入的x位置: 转化为_y位置: (widthDiv8<<3)-x-1
+      //输入的y位置: 转化为_x位置: _x=y. 限制: 分8块 分块: _x=y-r/stage*_h;
+      //_x=y-r/stage*_h; yd=0;
+      //_y=x;//(widthDiv8<<3)-x-1;
+      _x=x-r/stage*_h;
+      _y=y; yd=0;
+      if(_x<0){ xd=-_x; _x=0; }
+      break;
+      case 2: 
+      _x=x; xd=0;
+      _y=y-(GUY_STAGES-r/stage-1)*_h;
+      if(_y<0){ yd=-_y; _y=0; }
+      break;
+      case 3: 
+      _x=x-(GUY_STAGES-r/stage-1)*_h;
+      _y=y; yd=0;
+      if(_x<0){ xd=-_x; _x=0; }
+      break;
     }
+    spr->setRotation(rot);
+    switch(format&3){
+      case 1:
+        spr->drawBmpFile(*baseFs,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
+        break;
+      case 2:
+        spr->drawPngFile(*baseFs,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
+        break;
+      case 3:
+        spr->drawJpgFile(*baseFs,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
+        break;
+    }
+    spr->setRotation(0);
     //spr->setTextColor(0u,colors[r/stage]);//for debug
     //spr->drawString("Hello",0,0);//for debug
     /*此函数将会把图片文件绘制到这个灰度图里面.
@@ -200,14 +224,15 @@ void readguyImage::drawImageFile(bool use16grey){
   //Serial.printf("filename: %s, exname: %s\n",filename,ex);
 
   //图片将会分割成8个部分, 分块绘制, 节省内存.
-  int _w=(guy->memWidth()+7)&0x7ffffff8; //guy->guyMemoryWidth() 返回不随旋转参数而改变的显示内存宽度
-  if(!_w) return; //保证宽度>0
+  w=(guy->memWidth()+7)&0x7ffffff8; //guy->guyMemoryWidth() 返回不随旋转参数而改变的显示内存宽度
+  if(!w) return; //保证宽度>0
+  h=guy->memHeight();
   if(exPoolSize>guy->bufferLength()){ //当外部缓存的像素超过屏幕缓存时,使用外部缓存作为主缓冲区
-    _h=exPoolSize/_w;
+    _h=exPoolSize/w;
     _pool=exPool;
   }
   if(_pool==nullptr) {
-    _h=(guy->memHeight()+7)>>3; //设置缓存区的高度. 更多内存将可以更快显示
+    _h=(h+7)>>3; //设置缓存区的高度. 更多内存将可以更快显示
     _pool=(uint8_t *)guy->getBuffer();
   }
   //(guy->guyMemoryHeight()+7)>>3 返回高度,并补齐后右移三位 (等效于除以2³, 分成8份)
@@ -216,7 +241,7 @@ void readguyImage::drawImageFile(bool use16grey){
   LGFX_Sprite bmpspr;
   //首先, 需要获取到内部显存的地址, 用于建立图片分块绘制缓存.
   //获取屏幕缓存, 随后分配图片解码所需的内存.
-  bmpspr.setBuffer(_pool,_w,_h,lgfx::v1::color_depth_t::grayscale_8bit);
+  bmpspr.setBuffer(_pool,w,_h,lgfx::v1::color_depth_t::grayscale_8bit);
   //bmpspr.createSprite(guy_width,(guy_height+7)&0x7ffffff8);
 
   //必须在此处转化为8bit灰度 (256等阶)
@@ -230,10 +255,10 @@ void readguyImage::drawImageFile(bool use16grey){
   else if(strcmp(ex,"jpg") == 0 || strcmp(ex,"JPG") == 0 || strcmp(ex,"jpeg") == 0 || strcmp(ex,"JPEG") == 0)
     format|=3; //JPG格式
   else return; //未知格式
-  //bmpspr.drawBmp(*baseFs,filename,x,y,w,h,offsetx,offsety,scalex,scaley,datum);
-  floyd = new int16_t[_w<<1];
-  readBuff = new uint8_t[_w];
-  writeBuff = new uint8_t[_w>>3];
+  //bmpspr.drawBmp(*baseFs,filename,x,y,w,h,offsetx,offsety,scalex,scaley);
+  floyd = new int16_t[w<<1];
+  readBuff = new uint8_t[w];
+  writeBuff = new uint8_t[w>>3];
   //guy->display([](int)->uint8_t{ return 0xff; },true);
 
   if(use16grey){
