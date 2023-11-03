@@ -34,7 +34,6 @@
 #ifdef MEPD_DEBUG_DISPLAY
 #include "ctg_stack_c_defines.h"
 
-#define WHITE_GAP 4
 namespace EpdLcdDebug{
 
 class drv : public readguyEpdBase {

@@ -163,7 +163,7 @@ void drv_base::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   //for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++)
   //  guy_epdParam(c);
   for (int i = 0; i < epdHeight*epdWidth/8; i++)
-    guy_epdParam(f(i)); //按照给定的RAM写入数据
+    SpiTransfer(f(i)); //按照给定的RAM写入数据
 
   guy_epdCmd(0x92);
   if(part_mode){
@@ -201,7 +201,7 @@ void drv_base::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
     //send image data -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
     //Total 5624 data written.
     for (int i = 0; i < epdHeight*epdWidth/8; i++)
-      guy_epdParam(f(i)); //按照给定的RAM写入数据
+      SpiTransfer(f(i)); //按照给定的RAM写入数据
     guy_epdCmd(0x92);
     EndTransfer();
     //[EPDrg_BW<>] powerOff fx
@@ -224,7 +224,7 @@ void drv_base::drv_sleep() { //开始屏幕睡眠
 }
 
 void drv_base::drv_draw16grey_step(std::function<uint8_t(int)> f, int step){
-  if(_quality) return readguyEpdBase::drv_draw16grey_step(f,step);
+  if(_quality&1) return readguyEpdBase::drv_draw16grey_step(f,step);
   if(step==1){
     greyHQ=3;
     drv_setDepth(3);

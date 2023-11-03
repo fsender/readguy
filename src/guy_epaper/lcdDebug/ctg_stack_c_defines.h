@@ -73,9 +73,11 @@
 //#define _DEFINA_SD_CS_PIN 0
 
 // * for NodeMcu ctg stack LCF board
+#define WHITE_GAP 8
+
 #ifdef ESP8266
 #define DISPLAY_TYPE_ST7789_240320 //2.0寸的ST7789 IPS TFT模块
-#define _DEFINA_IPS_CS_PIN 15
+#define _DEFINA_IPS_CS_PIN 15 //lcdDebug是不支持自定义引脚的
 #define _DEFINA_IPS_DC_PIN 5
 #define _DEFINA_IPS_RST_PIN -1
 

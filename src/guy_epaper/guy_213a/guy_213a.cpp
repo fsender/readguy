@@ -128,14 +128,14 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
     //  for (int k = 0; k < GUY_D_WIDTH/8; k++)
     //    guy_epdParam(f(j*(GUY_D_WIDTH/8)+k)); //按照给定的RAM写入数据
     for (int i = 0; i < GUY_D_WIDTH/8*GUY_D_HEIGHT; i++)
-      guy_epdParam(f(i));
+      SpiTransfer(f(i));
   }
 	guy_epdCmd(0x24);
 	//for (int j = GUY_D_HEIGHT-1; j >= 0; j--)
 	//	for (int k = 0; k < GUY_D_WIDTH/8; k++)
 	//		guy_epdParam(f(j*(GUY_D_WIDTH/8)+k)); //按照给定的RAM写入数据
   for (int i = 0; i < GUY_D_WIDTH/8*GUY_D_HEIGHT; i++)
-    guy_epdParam(f(i));
+    SpiTransfer(f(i));
   epd_Init();
   guy_epdCmd(0x22);
   guy_epdParam(epdFull?0xc4:0x04);

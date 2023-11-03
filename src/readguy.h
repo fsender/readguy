@@ -178,12 +178,15 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     /** @brief 返回目标屏幕是否支持16级灰度 返回非0代表支持.
      *  @note 返回负整数则代表调用draw16greyStep需要从深色到浅色刷新, 而不是从浅色到深色刷新 */
     int supportGreyscaling() const{return READGUY_cali==127?guy_dev->drv_supportGreyscaling():0;}
-    /// @brief 设置灰度的渲染画质. 高画质模式在某些屏幕某些情况下可能表现不好.
-    void setGreyQuality(bool q) { if(READGUY_cali==127) guy_dev->setGreyQuality(q); }
+
+    /** @brief 设置灰度的渲染画质. 高画质模式在某些屏幕某些情况下可能表现不好.
+     *  @param q 0-关闭连续刷屏 开启16阶灰度抖动  1-开启连续刷屏 开启16阶灰度抖动
+     *           2-关闭连续刷屏 关闭16阶灰度抖动  3-开启连续刷屏 关闭16阶灰度抖动 */
+    void setGreyQuality(uint8_t q) { if(READGUY_cali==127) guy_dev->setGreyQuality(q); }
     /// @brief 显示灰度图片,如果支持,否则就不显示灰度图片了. 可以用省内存的方法显示
     void draw16grey(LGFX_Sprite &spr,uint16_t x,uint16_t y);
     /** @brief 按照自定义分步显示灰度图片,如果支持,否则就不显示灰度图片了. 可以用省内存的方法显示
-     *  @param step 步骤代号. 从1开始到15,依次调用此函数来自定义的灰度显示显存内容. 没有16.
+     *  @param step 步骤代号. 从1开始到15,依次调用此函数来自定义的灰度显示显存内容. 没有0和16.
      *  @note 必须按照 "慢刷全屏->绘图->设置参数1->绘图->设置参数2... 调用15次 来完成一次自定义灰度刷屏
      *  连续调用多次此函数之间, 可以修改显存内的像素颜色, 但只能从白色改为黑色.
      *  @attention 需要先调用 supportGreyscaling() 来确定是否支持灰度分步刷新.为负数时需要从深到浅刷新
@@ -219,8 +222,10 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
 #endif
     /// @brief 检查初始化屏幕硬件, 若检查失败返回0,否则返回硬件代号
     uint8_t checkEpdDriver();
-    /// @brief 初始化屏幕, 设置驱动代号, 引脚排列顺序. 过程会检验引脚可用性.
-    void setEpdDriver();
+    /** @brief 初始化屏幕, 设置驱动代号, 引脚排列顺序. 过程会检验引脚可用性.
+     *  @param g_width, g_height 显示区域的宽度和高度. 为0表示直接使用屏幕的宽度和高度
+     *  @note 这两个参数转专为指定分辨率的程序画面设计, 其他分辨率的画面会自动拉伸. [1.2新增] */
+    void setEpdDriver(int g_width = 0,int g_height = 0);
     /** @brief 初始化SD卡, 设置驱动代号, 引脚排列顺序. 过程会检验引脚可用性.
      *  @return SD卡初始化成功与否 */
     bool setSDcardDriver();
@@ -256,6 +261,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
 #endif
     int epd_OK=0; //墨水屏可用
     int currentBright = -3; //初始亮度
+    int16_t guy_width=0,guy_height=0;
     
     //LGFX_Sprite gfx; // 图形引擎类指针, 可以用这个指针去操作屏幕缓冲区
     readguyEpdBase *guy_dev = nullptr;
@@ -331,30 +337,39 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
 #endif
     }
   public: //增加了一些返回系统状态变量的函数, 它们是静态的, 而且不会对程序造成任何影响.
-    constexpr int getReadguyShareSpi() const { return config_data[1]; }
-    constexpr int getReadguyEpdType () const { return config_data[2]; } // 对应的epd驱动程序代号, -1为未指定
+    constexpr int getShareSpi() const { return config_data[1]; }
+    constexpr int getEpdType () const { return config_data[2]; } // 对应的epd驱动程序代号, -1为未指定
         //显示驱动部分, 显示默认使用vspi (vspi也是默认SPI库的通道)
-    constexpr int getReadguyEpdMosi () const { return config_data[3]; } // 目标显示器的 MOSI 引脚
-    constexpr int getReadguyEpdSclk () const { return config_data[4]; } // 目标显示器的 SCLK 引脚
-    constexpr int getReadguyEpdCs   () const { return config_data[5]; } // 目标显示器的 CS   引脚
-    constexpr int getReadguyEpdDc   () const { return config_data[6]; } // 目标显示器的 DC   引脚
-    constexpr int getReadguyEpdRst  () const { return config_data[7]; } // 目标显示器的 RST  引脚
-    constexpr int getReadguyEpdBusy () const { return config_data[8]; } // 目标显示器的 BUSY 引脚
+    constexpr int getEpdMosi () const { return config_data[3]; } // 目标显示器的 MOSI 引脚
+    constexpr int getEpdSclk () const { return config_data[4]; } // 目标显示器的 SCLK 引脚
+    constexpr int getEpdCs   () const { return config_data[5]; } // 目标显示器的 CS   引脚
+    constexpr int getEpdDc   () const { return config_data[6]; } // 目标显示器的 DC   引脚
+    constexpr int getEpdRst  () const { return config_data[7]; } // 目标显示器的 RST  引脚
+    constexpr int getEpdBusy () const { return config_data[8]; } // 目标显示器的 BUSY 引脚
         //sd卡驱动部分, 默认使用hspi (sd卡建议用hspi)
-    constexpr int getReadguySdMiso  () const { return config_data[9]; } // 目标sd卡的 MISO 引脚, sd_share_spi == 1 时无效
-    constexpr int getReadguySdMosi  () const { return config_data[10]; }// 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
-    constexpr int getReadguySdSclk  () const { return config_data[11]; }// 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
-    constexpr int getReadguySdCs    () const { return config_data[12]; }// 目标sd卡的 CS   引脚.
-    constexpr int getReadguyI2cSda  () const { return config_data[13]; }// 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
-    constexpr int getReadguyI2cScl  () const { return config_data[14]; }// 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
+    constexpr int getSdMiso  () const { return config_data[9]; } // 目标sd卡的 MISO 引脚, sd_share_spi == 1 时无效
+    constexpr int getSdMosi  () const { return config_data[10]; }// 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
+    constexpr int getSdSclk  () const { return config_data[11]; }// 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
+    constexpr int getSdCs    () const { return config_data[12]; }// 目标sd卡的 CS   引脚.
+    constexpr int getI2cSda  () const { return config_data[13]; }// 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
+    constexpr int getI2cScl  () const { return config_data[14]; }// 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
         //按键驱动部分, 为负代表高触发, 否则低触发,
         //注意, 这里的io编号是加1的, 即 1或-1 代表 gpio0 的低触发/高触发
-    constexpr int getReadguyBtn1Pin () const { return config_data[15]; } 
-    constexpr int getReadguyBtn2Pin () const { return config_data[16]; } 
-    constexpr int getReadguyBtn3Pin () const { return config_data[17]; } 
-    constexpr int getReadguyBlPin   () const { return config_data[18]; }//前置光接口引脚IO
-    constexpr int getReadguyRtcType () const { return config_data[19]; }//使用的RTC型号(待定, 还没用上)
-    constexpr int getButtonsCount   () const { return config_data[21]; } //按钮个数, 0-3都有可能
+    constexpr int getBtn1Pin () const { return config_data[15]; } 
+    constexpr int getBtn2Pin () const { return config_data[16]; } 
+    constexpr int getBtn3Pin () const { return config_data[17]; } 
+    constexpr int getBlPin   () const { return config_data[18]; } //前置光接口引脚IO
+    constexpr int getRtcType () const { return config_data[19]; } //使用的RTC型号(待定, 还没用上)
+    constexpr int getButtonsCount() const { return config_data[21]; } //按钮个数, 0-3都有可能
+    constexpr int memWidth   () const { return guy_width ;      } //返回显存宽度(不是画幅宽度),不会随着画布旋转改变
+    constexpr int memHeight  () const { return guy_height ;     } //返回显存高度(不是画幅高度),不会随着画布旋转改变
+    int drvWidth () const { return READGUY_cali==127?guy_dev->drv_width():0;  } //返回显示屏硬件宽度(不是画幅宽度)
+    int drvHeight() const { return READGUY_cali==127?guy_dev->drv_height():0; } //返回显示屏硬件高度(不是画幅高度)
+//  private:
+    void implBeginTransfer() { guy_dev->BeginTransfer(); } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!
+    void implEndTransfer()   { guy_dev->EndTransfer();   } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!
+    /// @brief 分阶段显示图片, 使用抖动算法. 更加的省内存.目前函数
+    void drawImageStage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint8_t stage,uint8_t totalstage);
 };
 #endif /* END OF FILE. ReadGuy project.
 Copyright (C) 2023 FriendshipEnder. */

@@ -44,7 +44,7 @@ public:
   int drv_width() const { return epdWidth;  }; //返回显示区域宽度
   int drv_height() const{ return epdHeight; }; //返回显示区域高度
   void drv_setDepth(uint8_t i); //设置显示颜色深度
-  int drv_supportGreyscaling() const { return _quality?16:-16; }
+  int drv_supportGreyscaling() const { return (_quality&1)?16:-16; }
   void drv_draw16grey_step(std::function<uint8_t(int)> f, int step);
 protected:
   int epdWidth;

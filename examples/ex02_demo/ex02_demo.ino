@@ -180,10 +180,16 @@ void setup(){
 
   guy.drawImage(sp,10,10); //使用抖动像素的方式显示图片(不是灰度, 只有黑点和白点的那种显示效果)
 
+  guy.display(); //自从1.2.0更新之后, drawImage不再刷屏, 此处需要额外调用display函数刷屏
+
   Serial.printf("[%lu] drawn dithering bmp.\n",millis()); //显示信息
 
   delay(2000);
 
+
+  guy.setGreyQuality(1); //设置灰度刷新方式. 对于支持连续刷灰度的屏幕才有效.
+  // 1(默认)为连续刷新, 0为循环调用 setDepth+display 来刷新 (可能会有白边)
+  //如果连续刷新效果不好, 请将此处改为0再试一次.
 
   guy.draw16grey(sp,10,10); //使用16级灰度的方式显示图片 需要的时间比较长
 
@@ -240,7 +246,9 @@ void setup(){
   
   guy.fillScreen(1);  //清屏
   
-  guy.display(false); //慢刷清屏
+  guy.display(FILL_WHITE,false); //慢刷清屏. 左侧的FILL_WHITE表示 不写入屏幕缓存, 直接刷全白
+  //可以改为FILL_BLACK来设置写入缓存全黑.
+  //以上的方式均不会修改屏幕缓存中的内容. 右侧的false表示全屏慢刷.
 
   guy.setTextColor(0);  //设置显示的颜色. 0代表黑色, 一个参数代表黑白显示.
                         //注意这个函数不是设定显示灰度的函数!

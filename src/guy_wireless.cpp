@@ -29,6 +29,7 @@
 
 #include "readguy.h"
 
+#ifdef READGUY_ESP_ENABLE_WIFI
 static const PROGMEM char NOT_SUPPORTED[] = "(不支持此屏幕)";
 static const PROGMEM char TEXT_HTML[] = "text/html";
 static const PROGMEM char TEXT_PLAIN [] = "text/plain";
@@ -111,7 +112,6 @@ const char *ReadguyDriver::epd_drivers_list[EPD_DRIVERS_NUM_MAX]={
   NAME_guyDev420WF,
   NAME_epdLcd
 };
-#ifdef READGUY_ESP_ENABLE_WIFI
 //static const char *index_cn_html;
 //static const uint8_t faviconData[1150];
 

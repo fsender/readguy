@@ -138,15 +138,15 @@ const PROGMEM unsigned char drv::lutFast_w_w[] ={ 0x02,2,0,48,0,1 };
 const PROGMEM unsigned char drv::lutFast_b_w[] ={ 0x5a,2,0,63,0,1 };
 const PROGMEM unsigned char drv::lutFast_w_b[] ={ 0x84,2,0,48,0,1 };
 const PROGMEM unsigned char drv::lutFast_b_b[] ={ 0x01,2,0,48,0,1 };
-void drv::epd_display(){
+//void drv::epd_display(){
+void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   BeginTransfer();
   Init(part_mode);
   if(part_mode){
     sendArea();
     guy_epdCmd(0x13);
-    for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++){
-      send(i);  //guy_epdParam(d[i]);
-    }
+    for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++)
+      SpiTransfer(f(i));
     //data
     guy_epdCmd(0x92);
     sendAreaRaw();
@@ -155,14 +155,12 @@ void drv::epd_display(){
   else{
     guy_epdCmd(0x10);
     //刷新数据
-    for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++){
-      send(i);  //guy_epdParam(d[i]);
-    }
+    for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++)
+      SpiTransfer(f(i));
     guy_epdCmd(0x13);
     //刷新数据
-    for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++){
-      send(i);  //guy_epdParam(d[i]);
-    }
+    for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++)
+      SpiTransfer(f(i));
     guy_epdCmd(0x92);
     //[EPDrg_BW<>] refresh fx
     guy_epdCmd(0x00);
@@ -179,9 +177,8 @@ void drv::epd_display(){
   if(part_mode){
     sendArea();
     guy_epdCmd(0x13);
-    for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++){
-      send(i);  //guy_epdParam(d[i]);
-    }
+    for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++)
+      SpiTransfer(f(i));
     guy_epdCmd(0x92);
     EndTransfer();
   }
@@ -189,9 +186,8 @@ void drv::epd_display(){
     Init(2);
     sendArea();
     guy_epdCmd(0x13);
-    for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++){
-      send(i);  //guy_epdParam(d[i]);
-    }
+    for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++)
+      SpiTransfer(f(i));
     guy_epdCmd(0x92);
     guy_epdCmd(0x02);
     EndTransfer();
@@ -211,10 +207,6 @@ void drv::drv_fullpart(bool part){ //切换慢刷/快刷功能
   if(!part) customLut = CUSTOM_LUT_DISABLE;
   part_mode = part;
   //Init(part);
-}
-void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
-  send = [&](int i){ guy_epdParam(f(i)); };
-  epd_display();
 }
 void drv::drv_sleep() { //开始屏幕睡眠
   if(RST_PIN>=0){ //未定义RST_PIN时无法唤醒

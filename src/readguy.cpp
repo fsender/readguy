@@ -172,18 +172,23 @@ uint8_t ReadguyDriver::checkEpdDriver(){
   Serial.println(F("IfInit OK"));
   return READGUY_epd_type;
 }
-void ReadguyDriver::setEpdDriver(){
+void ReadguyDriver::setEpdDriver(int g_width,int g_height){
   guy_dev->spi_tr_release = in_release;
   guy_dev->spi_tr_press   = in_press;
   guy_dev->drv_init(); //初始化epd驱动层
+  if(g_width) guy_width = g_width;
+  else guy_width = guy_dev->drv_width(); //宽度必须是8的倍数, 但这个可以由GFX自动计算
+  if(g_height) guy_height = g_height;
+  else guy_height = guy_dev->drv_height();
   Serial.println(F("EPD init OK"));
   //以下依赖于你的图形驱动
   setColorDepth(1); //单色模式
   createPalette();  //初始化颜色系统
-  Serial.printf_P(PSTR("mono set: w: %d, h: %d\n"),guy_dev->drv_width(),guy_dev->drv_height());
+  Serial.printf_P(PSTR("mono set: w: %d, h: %d\n"),guy_width,guy_height);
    //创建画布. 根据LovyanGFX的特性, 如果以前有画布会自动重新生成新画布
   //此外, 即使画布宽度不是8的倍数(如2.13寸单色),也支持自动补全8的倍数 ( 250x122 => 250x128 )
-  createSprite(guy_dev->drv_width(),guy_dev->drv_height());
+  //为了保证图片显示功能的正常使用, 高度也必须是8的倍数.
+  createSprite(guy_width,(guy_height+7)&0x7ffffff8);
   //setRotation(1); //旋转之后操作更方便
   setRotation(0);
   setFont(&fonts::Font0);
@@ -209,7 +214,6 @@ bool ReadguyDriver::setSDcardDriver(){
     READGUY_sd_ok = SDFS.begin();
 #else
     if(sd_spi == nullptr) {
-      //sd_spi = new SPIClass(HSPI);
 #if (defined(CONFIG_IDF_TARGET_ESP32))
       sd_spi = new SPIClass(VSPI);
 #else
@@ -386,6 +390,10 @@ void ReadguyDriver::display(std::function<uint8_t(int)> f, bool part){
 void ReadguyDriver::drawImage(LGFX_Sprite &spr,uint16_t x,uint16_t y) { 
   if(READGUY_cali==127) guy_dev->drv_drawImage(*this, spr, x, y); 
 }
+void ReadguyDriver::drawImageStage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint8_t stage,uint8_t totalstage) {
+  if(READGUY_cali!=127 || stage>=totalstage) return;
+  guy_dev->drv_drawImage(*this, spr, x, y, (totalstage<=1)?0:(stage==0?1:(stage==(totalstage-1)?3:2)));
+}
 void ReadguyDriver::setDepth(uint8_t d){ 
   if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling()) guy_dev->drv_setDepth(d); 
 }
@@ -396,16 +404,20 @@ void ReadguyDriver::draw16grey(LGFX_Sprite &spr,uint16_t x,uint16_t y){
   guy_dev->drv_drawImage(*this, spr, x, y);
 }
 void ReadguyDriver::draw16greyStep(int step){
-  if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling())
-    return guy_dev->drv_draw16grey_step((const uint8_t *)this->getBuffer(),step);
+  if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling() && step>0 && step<16 ){
+    if(step==1) guy_dev->drv_fullpart(1);
+    guy_dev->drv_draw16grey_step((const uint8_t *)this->getBuffer(),step);
+  }
 }
 void ReadguyDriver::draw16greyStep(std::function<uint8_t(int)> f, int step){
-  if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling())
-    return guy_dev->drv_draw16grey_step(f,step);
+  if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling() && step>0 && step<16 ){
+    if(step==1) guy_dev->drv_fullpart(1);
+    guy_dev->drv_draw16grey_step(f,step);
+  }
 }
 void ReadguyDriver::invertDisplay(){
   if(READGUY_cali==127){
-    const int pixels=((guy_dev->drv_width()+7)>>3)*guy_dev->drv_height();
+    const int pixels=((guy_width+7)>>3)*guy_height;
     for(int i=0;i<pixels;i++)
       ((uint8_t*)(getBuffer()))[i]=uint8_t(~(((uint8_t*)(getBuffer()))[i]));
   }

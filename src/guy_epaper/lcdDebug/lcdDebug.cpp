@@ -54,12 +54,15 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   }
   for(int j=0;j<drv_height();j++){
     for(int i=0;i<xbits;i++){
-      if(f(j*xbits+i) == 0xff && i!=xbits-1)
+      uint_fast8_t readf=f(j*xbits+i);
+      if(readf == 0xff && i!=xbits-1)
         ips.drawFastHLine(WHITE_GAP+i*8,WHITE_GAP+j,8,0xffff);
       else {
         int lineOK=0;
-        ips.readRect(WHITE_GAP+i*8,WHITE_GAP+j,8,1,dat); //注意这里 readrect函数已经自动化实现边界处理了
-        if(f(j*xbits+i) == 0x00 && i!=xbits-1){
+        if(partMode)//注意这里 readrect函数已经自动化实现边界处理了
+          ips.readRect(WHITE_GAP+i*8,WHITE_GAP+j,8,1,dat); 
+        else memset(dat,0xff,sizeof(dat));
+        if(readf == 0x00 && i!=xbits-1){
           for(int k=0;k<8;k++)
             if((dat[k]&0x1f)==0x1f) lineOK++;
           if(lineOK==8) {
@@ -69,7 +72,7 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
         }
         for(int k=0;k<8;k++){
           if(i==xbits-1 && i*8+k>=drv_width()) break;
-          if((f(j*xbits+i)&(0x80>>k)))
+          if((readf&(0x80>>k)))
             ips.drawPixel(WHITE_GAP+i*8+k,WHITE_GAP+j,0xffff);
           else if((dat[k]&0x1f)==0x1f)
             ips.drawPixel(WHITE_GAP+i*8+k,WHITE_GAP+j,0x1082*(15-depth));

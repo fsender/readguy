@@ -47,7 +47,7 @@ public:
     int drv_height() const{ return GUY_D_HEIGHT; }; //返回显示区域高度
     void drv_setDepth(uint8_t i) { epdFull=0; GreyScaling = i>15?15:i; if(!i) GreyScaling=15;}
     void drv_draw16grey_step(std::function<uint8_t(int)> f, int step);
-    int drv_supportGreyscaling() const { return _quality?16:-16; }
+    int drv_supportGreyscaling() const { return (_quality&1)?16:-16; }
 private:
 	//void Lut(unsigned char* lut);
   void epd_Init(void);

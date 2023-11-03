@@ -75,26 +75,6 @@ void drvBase::SetLut(const unsigned char* lut) {
   }
 }
 
-void drvBase::SetFrameWriter(std::function<uint8_t(int)> f,uint8_t _extra) {
-  guy_epdCmd(0x44);
-  guy_epdParam((0 >> 3) & 0xFF);
-  guy_epdParam(((epdWidth-1) >> 3) & 0xFF);
-  guy_epdCmd(0x45);
-  guy_epdParam(0 & 0xFF);
-  guy_epdParam((0 >> 8) & 0xFF);
-  guy_epdParam((epdHeight-1) & 0xFF);
-  guy_epdParam(((epdHeight-1) >> 8) & 0xFF);
-  
-  guy_epdCmd(0x4e);
-  guy_epdParam((0 >> 3) & 0xFF);
-  guy_epdCmd(0x4f);
-  guy_epdParam(0 & 0xFF);
-  guy_epdParam((0 >> 8) & 0xFF);
-  guy_epdCmd(_extra);
-  for (int i = 0; i < epdHeight*epdWidth / 8; i++) 
-    guy_epdParam(f(i));
-}
-
 const PROGMEM unsigned char lut_slow[] =
 {
   /*  0x02, 0x02, 0x01, 0x11, 0x12, 0x12, 0x22, 0x22, 
@@ -134,7 +114,7 @@ void drvBase::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新等�
   guy_epdBusy(100);
   guy_epdCmd(0x24);  /* will send the color data */
   for (int i = 0; i < epdHeight*epdWidth / 8; i++) 
-    guy_epdParam(f(i));
+    SpiTransfer(f(i));
   guy_epdCmd(0x22);
   guy_epdParam(0xC4);
   guy_epdCmd(0x20);
@@ -146,7 +126,7 @@ void drvBase::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新等�
   guy_epdBusy(90);
   guy_epdCmd(0x26);  /* will send the color data */
   for (int i = 0; i < epdHeight*epdWidth / 8; i++) 
-    guy_epdParam(f(i));
+    SpiTransfer(f(i));
   EndTransfer();
 }
 void drvBase::drv_sleep() { //开始屏幕睡眠

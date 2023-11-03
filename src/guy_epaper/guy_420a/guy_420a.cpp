@@ -101,6 +101,7 @@ const PROGMEM unsigned char drv::lut_213_B72_16grey[]={
 void drv::epd_Init(void){
   const uint16_t GreyDrvFrameFreq[]={
     0x1108, /*  75Hz */
+    0x1108, /*  75Hz */
     0x180c, /*  35Hz */
     0x2c0a, /*  50Hz */
     0x0709, /*  65Hz */
@@ -115,7 +116,6 @@ void drv::epd_Init(void){
     0x1804, /* 140Hz */
     0x0d04, /* 145Hz */
     0x0304, /* 150Hz */
-    //0x0304, /* 150Hz */
   };
   //_InitDisplay fx
   if(epdFull==2) {
@@ -203,11 +203,11 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   if(epdFull){ //慢刷
     guy_epdCmd(0x26);
     for (int i = 0; i < GUY_D_HEIGHT*GUY_D_WIDTH/8; i++)
-      guy_epdParam(f(i)); //按照给定的RAM写入数据
+      SpiTransfer(f(i)); //按照给定的RAM写入数据
   }
   guy_epdCmd(0x24);
   for (int i = 0; i < GUY_D_HEIGHT*GUY_D_WIDTH/8; i++)
-    guy_epdParam(f(i)); //按照给定的RAM写入数据
+    SpiTransfer(f(i)); //按照给定的RAM写入数据
   if(epdFull){ //慢刷
     epd_Init();
     SetMemory();
@@ -232,12 +232,12 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   SetMemory();
   guy_epdCmd(0x26);
   for (int i = 0; i < GUY_D_HEIGHT*GUY_D_WIDTH/8; i++)
-    guy_epdParam(f(i)); //按照给定的RAM写入数据
+    SpiTransfer(f(i)); //按照给定的RAM写入数据
   EndTransfer();
   if(epdFull) power_down();
 }
 void drv::drv_draw16grey_step(std::function<uint8_t(int)> f, int step){
-  if(_quality) return readguyEpdBase::drv_draw16grey_step(f,step);
+  if(_quality&1) return readguyEpdBase::drv_draw16grey_step(f,step);
   if(step==1) drv_fullpart(1);//初始阶段,完成准备工作 //设置为快刷模式
   GreyScalingHighQuality=step; //开启高品质灰度模式
   drv_dispWriter(f);

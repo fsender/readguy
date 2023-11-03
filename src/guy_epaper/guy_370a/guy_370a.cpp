@@ -31,7 +31,7 @@
 #include "guy_370a.h"
 #ifdef READGUY_DEV_370A
 namespace guydev_370A{
-static const PROGMEM unsigned char lut_1Gray_GC[] ={
+static const PROGMEM unsigned char lut_1Grey_GC[] ={
   0x2A,0x05,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,//1
   0x05,0x2A,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,//2
   0x2A,0x15,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,//3
@@ -39,7 +39,7 @@ static const PROGMEM unsigned char lut_1Gray_GC[] ={
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,//5
   0x00,0x02,0x03,0x0A,0x00,0x02,0x06,0x0A,0x05,0x00
 };  
-static const PROGMEM unsigned char lut_1Gray_A2[] ={
+static const PROGMEM unsigned char lut_1Grey_A2[] ={
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //1
   0x0A,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //2
   0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //3
@@ -88,12 +88,12 @@ void drv::Load_LUT(unsigned char mode) {
   guy_epdCmd(0x32);
   for (i = 0; i < 60; i++) {
     if(mode == 1)
-      guy_epdParam(pgm_read_byte(lut_1Gray_GC+i));
+      guy_epdParam(pgm_read_byte(lut_1Grey_GC+i));
     else if(mode == 0){
       if(20==i && greyScaling<8) guy_epdParam(0x03);
       else if(53==i && greyScaling<3) guy_epdParam(greyScaling);
       else if(53==i && greyScaling==15) guy_epdParam(5);
-      else guy_epdParam(pgm_read_byte(lut_1Gray_A2+i));
+      else guy_epdParam(pgm_read_byte(lut_1Grey_A2+i));
     }
   }   
   for (i = 0; i < 45; i++) {
@@ -124,11 +124,11 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
 
   guy_epdCmd(0x24);
   for (int i = 0; i < GUY_D_HEIGHT*GUY_D_WIDTH/8; i++)
-    guy_epdParam(f(i)); //按照给定的RAM写入数据
+    SpiTransfer(f(i)); //按照给定的RAM写入数据
   if(!part_mode) {
     guy_epdCmd(0x26);
     for (int i = 0; i < GUY_D_HEIGHT*GUY_D_WIDTH/8; i++)
-      guy_epdParam(f(i)); //按照给定的RAM写入数据
+      SpiTransfer(f(i)); //按照给定的RAM写入数据
   }
 
   Load_LUT(!part_mode);

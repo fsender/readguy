@@ -55,7 +55,6 @@ protected:
   int idleFastRf;
 private:
     int  Init(const unsigned char* lut);
-    void SetFrameWriter(std::function<uint8_t(int)> f,uint8_t _extra);
     const unsigned char* lut;
     uint8_t iLut = 15;
     uint8_t sleeping=1;

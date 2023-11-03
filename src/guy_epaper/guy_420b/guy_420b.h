@@ -79,9 +79,6 @@ private:
 
     void SendLuts(uint8_t lutOption); //0:慢刷, 1:快刷, 2:四阶灰度
     uint8_t customLut, customGreyscale; //customLut 是灰度刷新时的自定义lut
-    void epd_display();
-    //void (*send)(int);
-    std::function<void(int)> send; //此处不能用 void (*send)(int); 是因为lambda函数是std的
     static const PROGMEM uint8_t greyTable[16];
 };
 }

@@ -121,31 +121,6 @@ void drvSSD168x::epd_init() {
 	SetLut();
 }
 
-void drvSSD168x::SetFrameWriter(std::function<uint8_t(int)> f) {
-  if(_part && epd_PowerOn){
-    //Reset();
-    SetLut();
-    guy_epdCmd(0x37); 
-    for(int i=0;i<10;i++)  guy_epdParam(i==5?0x40:0x00);  
-    guy_epdCmd(0x3C); //BorderWavefrom
-    guy_epdParam(0x80);	
-
-    guy_epdCmd(0x22); 
-    guy_epdParam(0xC0);   
-    guy_epdCmd(0x20); 
-    guy_epdBusy(140);  
-  }
-  else epd_init();
-  SetMemory();
-  guy_epdCmd(0x24);
-  for (int i = 0; i < epdHeight*epdWidth / 8; i++) 
-    guy_epdParam(f(i));
-  if(!_part){
-    guy_epdCmd(0x26);
-    for (int i = 0; i < epdHeight*epdWidth / 8; i++) 
-      guy_epdParam(f(i));
-  }
-}
 void drvSSD168x::DisplayFrame(void) {
   guy_epdCmd(0x22);
   guy_epdParam(_part?0x0f:0xc7);
@@ -198,7 +173,29 @@ void drvSSD168x::drv_fullpart(bool part){ //切换慢刷/快刷功能
 }
 void drvSSD168x::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   BeginTransfer();
-  SetFrameWriter(f);
+  if(_part && epd_PowerOn){
+    //Reset();
+    SetLut();
+    guy_epdCmd(0x37); 
+    for(int i=0;i<10;i++)  guy_epdParam(i==5?0x40:0x00);  
+    guy_epdCmd(0x3C); //BorderWavefrom
+    guy_epdParam(0x80);	
+
+    guy_epdCmd(0x22); 
+    guy_epdParam(0xC0);   
+    guy_epdCmd(0x20); 
+    guy_epdBusy(140);  
+  }
+  else epd_init();
+  SetMemory();
+  guy_epdCmd(0x24);
+  for (int i = 0; i < epdHeight*epdWidth / 8; i++) 
+    SpiTransfer(f(i));
+  if(!_part){
+    guy_epdCmd(0x26);
+    for (int i = 0; i < epdHeight*epdWidth / 8; i++) 
+      SpiTransfer(f(i));
+  }
   DisplayFrame();
   EndTransfer();
   guy_epdBusy(_part?600:2300);
@@ -220,7 +217,7 @@ void drvSSD168x::drv_setDepth(uint8_t i){ //设置显示颜色深度, 不支持�
   else iLut=15;
 }
 void drvSSD168x::drv_draw16grey_step(std::function<uint8_t(int)> f, int step){
-  if(_quality) return readguyEpdBase::drv_draw16grey_step(f,step);
+  if(_quality&1) return readguyEpdBase::drv_draw16grey_step(f,step);
   if(step==1){
     drv_fullpart(1);
     greyScaling=1;

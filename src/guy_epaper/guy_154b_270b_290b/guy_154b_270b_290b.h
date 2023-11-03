@@ -44,7 +44,7 @@ public:
   void drv_sleep() ; //开始屏幕睡眠
   int drv_width() const { return epdWidth;  }; //返回显示区域宽度
   int drv_height() const{ return epdHeight; }; //返回显示区域高度
-  int drv_supportGreyscaling() const { return _quality?16:-16; }
+  int drv_supportGreyscaling() const { return (_quality&1)?16:-16; }
   void drv_setDepth(uint8_t i); //设置显示颜色深度, 不支持的话什么都不做
   void drv_draw16grey_step(std::function<uint8_t(int)> f, int step);
 protected:
@@ -61,10 +61,8 @@ private:
   static const unsigned char VSH_table[32];
 
   void epd_init();
-  void SetFrameWriter(std::function<uint8_t(int)> f);
   void DisplayFrame(void);
 	void SetLut();
-  //void SetLut_by_host(const unsigned char *lut);
 };
 
 #ifdef READGUY_DEV_154B

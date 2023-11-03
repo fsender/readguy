@@ -38,6 +38,8 @@
 #include "guy_epaper_config.h"
 #define EPD_DRIVERS_NUM_MAX 12 //此选项请不要取消注释掉
 
+#define FILL_WHITE ([](int)->uint8_t{return 0xff;})
+#define FILL_BLACK ([](int)->uint8_t{return 0x00;})
 class readguyEpdBase {
 protected:
     SPIClass *_spi;
@@ -47,24 +49,32 @@ protected:
     int8_t CS_PIN  ;
     int8_t BUSY_PIN;
     uint8_t in_trans=0;
-    uint8_t _quality=0;  //灰度显示品质 0(默认)-高品质 1-低品质 部分屏幕支持高品质的连续刷灰度.
+    uint8_t _quality=2;  //灰度显示品质 0(默认)-高品质 1-低品质 部分屏幕支持高品质的连续刷灰度.
   #ifdef MEPD_DEBUG_WAVE
     uint16_t dat_combo = 0;   //dc引脚状态 0 command, 1 data
+  #endif
+    uint16_t *readBuff;// = new uint16_t[spr.width()];
+    uint8_t *writeBuff;// = new uint8_t[w];
+  #if (defined(FLOYD_DITHERING_16GREY) || defined(FLOYD_STEINBERG_DITHERING))
+    int16_t *floyd_tab[2];
   #endif
 
 public:
     readguyEpdBase(void);
     virtual ~readguyEpdBase(void);
     int  IfInit(SPIClass &c,int8_t cs,int8_t dc,int8_t rst,int8_t busy);
-    void DigitalWrite(int pin, int value); 
-    int  DigitalRead(int pin);
+    IRAM_ATTR void DigitalWrite(int pin, int value) { if(pin>=0)  digitalWrite(pin, value); }
+    IRAM_ATTR int  DigitalRead(int pin) { return (pin>=0)?digitalRead(pin):1; }
     void DelayMs(unsigned int delaytime);
     void BeginTransfer();
     void EndTransfer();
-    void SpiTransfer(unsigned char data);
+    void SpiTransfer(unsigned char data){
+      if(in_trans) 
+        _spi->transfer(data);
+    }
     //basic I/O operation
     void guy_epdCmd(unsigned char command);
-    void guy_epdParam(unsigned char data);
+    void guy_epdParam(unsigned char data); //发送数据, 注意此方式速度会比较慢 大量数据发送请直接用SpiTransfer()
     void guy_epdBusy(int32_t maxt);
     void Reset(uint32_t minTime = 20);
     void SetMemory(); //集成了0x44 0x45 0x4e 0x4f指令的函数. 此函数用于设置墨水屏内存写入方式
@@ -86,8 +96,8 @@ public:
      *  @param gamma_on 是否对灰度值进行gamma校正(速度慢)
      *  @return uint32_t 颜色的灰度值
      */
-    static int greysc(int c){return(((c>>3)&0x1F)*79+(((c<<3)+(c>>13))&0x3F)*76+((c>>8)&0x1F)*30)>>5;}
-    void drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y); //分步完成灰度刷新
+    IRAM_ATTR static int greysc(int c){return(((c>>3)&0x1F)*79+(((c<<3)+(c>>13))&0x3F)*76+((c>>8)&0x1F)*30)>>5;}
+    void drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,int o=0); //分步完成灰度刷新
     void drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y);//省内存方式
     void drv_draw16grey_step(const uint8_t *buf, int step){ //分步完成灰度刷新
       drv_draw16grey_step([&](int n)->uint8_t{return buf[n];},step);
@@ -96,9 +106,10 @@ public:
       drv_setDepth(step);
       drv_dispWriter(f);
     }
-    void setGreyQuality(bool q) { _quality=!q; } //设置灰度的渲染画质. 高画质模式在某些屏幕某些情况下可能表现不好.
+    void setGreyQuality(uint8_t q){_quality=q^3;} //设置灰度的渲染画质. 高画质模式在某些屏幕某些情况下可能表现不好.
     void (*spi_tr_release)(void);
     void (*spi_tr_press)(void);
+    friend class ReadguyDriver;
 #ifdef MEPD_DEBUG_DISPLAY
     friend class LGFX;
 #endif
