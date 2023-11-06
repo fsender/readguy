@@ -149,7 +149,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
      * 2:自动连接到已存的WiFi, 但不等待连接成功
      *  @return SD卡是否就绪
      */
-    uint8_t init(uint8_t WiFiSet = 0);
+    uint8_t init(uint8_t WiFiSet = 0,bool initepd = 1/* ,int g_width = 0,int g_height = 0 */);
     /// @brief 设置显示亮度
     void setBright(int d);
     /// @brief 返回显示亮度
@@ -171,8 +171,12 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
      *  该函数会将参数从0开始,每次逐渐增加1的顺序来被调用. 即先调用f(0),再f(1),f(2),f(3)... 以此类推.
      */
     void display(std::function<uint8_t(int)> f, bool part = true);
-    /// @brief 显示图片, 使用抖动算法. 可以用省内存的方法显示
-    void drawImage(LGFX_Sprite &spr,uint16_t x,uint16_t y);
+    /// @brief 显示图片, 使用抖动算法. 可以用省内存的方法显示, 可以缩放到指定的宽度和高度
+    void drawImage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw=0, uint16_t zoomh=0){
+      if(READGUY_cali==127) drawImage(*this,spr,x,y,zoomw,zoomh);
+    }
+    /// @brief 显示图片, 将图片(任意颜色格式)显示到一个黑白色的sprite(必须是黑白二值型)上 (未经测试)
+    void drawImage(LGFX_Sprite &base,LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw=0,uint16_t zoomh=0);
     /// @brief 设置显示对比度(灰度)
     void setDepth(uint8_t d);
     /** @brief 返回目标屏幕是否支持16级灰度 返回非0代表支持.
@@ -184,12 +188,12 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
      *           2-关闭连续刷屏 关闭16阶灰度抖动  3-开启连续刷屏 关闭16阶灰度抖动 */
     void setGreyQuality(uint8_t q) { if(READGUY_cali==127) guy_dev->setGreyQuality(q); }
     /// @brief 显示灰度图片,如果支持,否则就不显示灰度图片了. 可以用省内存的方法显示
-    void draw16grey(LGFX_Sprite &spr,uint16_t x,uint16_t y);
+    void draw16grey(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw=0,uint16_t zoomh=0);
     /** @brief 按照自定义分步显示灰度图片,如果支持,否则就不显示灰度图片了. 可以用省内存的方法显示
      *  @param step 步骤代号. 从1开始到15,依次调用此函数来自定义的灰度显示显存内容. 没有0和16.
      *  @note 必须按照 "慢刷全屏->绘图->设置参数1->绘图->设置参数2... 调用15次 来完成一次自定义灰度刷屏
      *  连续调用多次此函数之间, 可以修改显存内的像素颜色, 但只能从白色改为黑色.
-     *  @attention 需要先调用 supportGreyscaling() 来确定是否支持灰度分步刷新.为负数时需要从深到浅刷新
+     *  @attention 需要先调用 supportGreyscaling() 来确定是否支持灰度分步刷新.为负数时需要从深到浅刷新. 参见示例.
      */
     void draw16greyStep(int step);
     /** @brief 分步刷新显示灰度, 详见 display(f,part) 和 draw16grey(spr,x,y) 的注释.
@@ -225,7 +229,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     /** @brief 初始化屏幕, 设置驱动代号, 引脚排列顺序. 过程会检验引脚可用性.
      *  @param g_width, g_height 显示区域的宽度和高度. 为0表示直接使用屏幕的宽度和高度
      *  @note 这两个参数转专为指定分辨率的程序画面设计, 其他分辨率的画面会自动拉伸. [1.2新增] */
-    void setEpdDriver(int g_width = 0,int g_height = 0);
+    void setEpdDriver(bool initepd = 1/* ,int g_width = 0,int g_height = 0 */);
     /** @brief 初始化SD卡, 设置驱动代号, 引脚排列顺序. 过程会检验引脚可用性.
      *  @return SD卡初始化成功与否 */
     bool setSDcardDriver();
@@ -261,7 +265,6 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
 #endif
     int epd_OK=0; //墨水屏可用
     int currentBright = -3; //初始亮度
-    int16_t guy_width=0,guy_height=0;
     
     //LGFX_Sprite gfx; // 图形引擎类指针, 可以用这个指针去操作屏幕缓冲区
     readguyEpdBase *guy_dev = nullptr;
@@ -361,15 +364,18 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     constexpr int getBlPin   () const { return config_data[18]; } //前置光接口引脚IO
     constexpr int getRtcType () const { return config_data[19]; } //使用的RTC型号(待定, 还没用上)
     constexpr int getButtonsCount() const { return config_data[21]; } //按钮个数, 0-3都有可能
-    constexpr int memWidth   () const { return guy_width ;      } //返回显存宽度(不是画幅宽度),不会随着画布旋转改变
-    constexpr int memHeight  () const { return guy_height ;     } //返回显存高度(不是画幅高度),不会随着画布旋转改变
+    //constexpr int memWidth   () const { return guy_width ;  } //返回显存宽度(不是画幅宽度),不会随着画布旋转改变
+    //constexpr int memHeight  () const { return guy_height ; } //返回显存高度(不是画幅高度),不会随着画布旋转改变
     int drvWidth () const { return READGUY_cali==127?guy_dev->drv_width():0;  } //返回显示屏硬件宽度(不是画幅宽度)
     int drvHeight() const { return READGUY_cali==127?guy_dev->drv_height():0; } //返回显示屏硬件高度(不是画幅高度)
+    int width () const { return READGUY_cali==127?((getRotation()&1)?drvHeight():drvWidth()):0; }
+    int height() const { return READGUY_cali==127?((getRotation()&1)?drvWidth():drvHeight()):0; }
 //  private:
     void implBeginTransfer() { guy_dev->BeginTransfer(); } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!
     void implEndTransfer()   { guy_dev->EndTransfer();   } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!
     /// @brief 分阶段显示图片, 使用抖动算法. 更加的省内存.目前函数
-    void drawImageStage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint8_t stage,uint8_t totalstage);
+    void drawImageStage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint8_t stage,uint8_t totalstage,
+      uint16_t zoomw=0,uint16_t zoomh=0);
 };
 #endif /* END OF FILE. ReadGuy project.
 Copyright (C) 2023 FriendshipEnder. */

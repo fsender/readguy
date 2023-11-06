@@ -56,16 +56,7 @@ int drvBase::Init(const unsigned char* lut) {
   guy_epdParam((iLut==1)?0x02:((iLut==3 || iLut==5)?0x05:0x08)); // 2us per line
   guy_epdCmd(0x11);
   guy_epdParam(0x03);                     // X increment; Y increment
-  SetLut(this->lut);
-  // * EPD hardware init end /
-  EndTransfer();
-  return 0;
-}
-
-void drvBase::SetLut(const unsigned char* lut) {
-  this->lut = lut;
   guy_epdCmd(0x32);
-  // * the length of look-up table is 30 bytes /
   for (int i = 0; i < 30; i++) {
     if(iLut>0 && iLut<15 && i>19 && i<23){
       guy_epdParam(pgm_read_byte(lut_grey_update+iLut*2+i-(i==20?22:23)));
@@ -73,6 +64,8 @@ void drvBase::SetLut(const unsigned char* lut) {
     else
       guy_epdParam(pgm_read_byte(this->lut+i));
   }
+  EndTransfer();
+  return 0;
 }
 
 const PROGMEM unsigned char lut_slow[] =
@@ -99,14 +92,24 @@ const PROGMEM unsigned char lut_grey_update[]={ //从上到下是依次加深
   0x12, 0x44, 0x13, 0x44
 };
 
-void drvBase::drv_init(){
+void drvBase::drv_init(){ //new init method can init without freshing.
+  iLut = 15;                //新的初始化方式可以允许不初始化直接显示
+  sleeping=1;
+  //drv_color(0xffu); //睡眠模式下始终需要慢刷
+}
+void drvBase::drv_fullpart(bool part){ //切换慢刷/快刷功能
+  if(!part) iLut=15;
+  if(sleeping) iLut=15;
+  else Init(part?lut_fast:lut_slow);
+}
+/*void drvBase::drv_init(){
   Init(lut_slow);
   drv_color(0xffu); //睡眠模式下始终需要慢刷
 }
 void drvBase::drv_fullpart(bool part){ //切换慢刷/快刷功能
   if(!part) iLut=15; //恢复默认的灰度模式
   Init(part?lut_fast:lut_slow);
-}
+}*/
 void drvBase::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新等功能
   if(sleeping) Init(lut_slow);
   BeginTransfer();
@@ -136,8 +139,8 @@ void drvBase::drv_sleep() { //开始屏幕睡眠
     EndTransfer();
     guy_epdBusy(150);
     DigitalWrite(RST_PIN, LOW);
-    sleeping=1;
   }
+  sleeping=1;
 }
 void drvBase::drv_setDepth(uint8_t i){
   iLut = i?(i>15?15:i):15;

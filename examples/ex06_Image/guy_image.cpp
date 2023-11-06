@@ -80,9 +80,11 @@ uint8_t readguyImage::drawImgHandler(int r, LGFX_Sprite *spr){
       case 1:
         spr->drawBmpFile(*baseFs,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
         break;
+#ifndef ESP8266
       case 2:
         spr->drawPngFile(*baseFs,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
         break;
+#endif
       case 3:
         spr->drawJpgFile(*baseFs,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
         break;
@@ -224,9 +226,9 @@ void readguyImage::drawImageFile(bool use16grey){
   //Serial.printf("filename: %s, exname: %s\n",filename,ex);
 
   //图片将会分割成8个部分, 分块绘制, 节省内存.
-  w=(guy->memWidth()+7)&0x7ffffff8; //guy->guyMemoryWidth() 返回不随旋转参数而改变的显示内存宽度
+  w=(guy->drvWidth()+7)&0x7ffffff8; //guy->guyMemoryWidth() 返回不随旋转参数而改变的显示内存宽度
   if(!w) return; //保证宽度>0
-  h=guy->memHeight();
+  h=guy->drvHeight();
   if(exPoolSize>guy->bufferLength()){ //当外部缓存的像素超过屏幕缓存时,使用外部缓存作为主缓冲区
     _h=exPoolSize/w;
     _pool=exPool;
@@ -250,8 +252,10 @@ void readguyImage::drawImageFile(bool use16grey){
   //随后打开图片进行解码. 可选显示的位置和宽度高度参数, 屏幕上的其他部分则会变成白色.
   if(strcmp(ex,"bmp") == 0 || strcmp(ex,"BMP") == 0) //BMP格式, 绘制BMP图片
     format|=1; //BMP格式
+#ifndef ESP8266
   else if(strcmp(ex,"png") == 0 || strcmp(ex,"PNG") == 0) //PNG格式, 绘制PNG图片
     format|=2; //PNG格式
+#endif
   else if(strcmp(ex,"jpg") == 0 || strcmp(ex,"JPG") == 0 || strcmp(ex,"jpeg") == 0 || strcmp(ex,"JPEG") == 0)
     format|=3; //JPG格式
   else return; //未知格式
@@ -291,8 +295,10 @@ uint8_t readguyImage::drawImageToBuffer(){
 
   if(strcmp(ex,"bmp") == 0 || strcmp(ex,"BMP") == 0) //BMP格式, 绘制BMP图片
     format|=1; //BMP格式
+#ifndef ESP8266
   else if(strcmp(ex,"png") == 0 || strcmp(ex,"PNG") == 0) //PNG格式, 绘制PNG图片
     format|=2; //PNG格式
+#endif
   else if(strcmp(ex,"jpg") == 0 || strcmp(ex,"JPG") == 0 || strcmp(ex,"jpeg") == 0 || strcmp(ex,"JPEG") == 0)
     format|=3; //JPG格式
   else return 2; //未知格式
@@ -310,9 +316,11 @@ uint8_t readguyImage::drawImageToBuffer(){
       case 1:
         spr.drawBmpFile(*baseFs,filename,0,0,0,0,offsetx,offsety+_h*i,scalex,scaley);
         break;
+#ifndef ESP8266
       case 2:
         spr.drawPngFile(*baseFs,filename,0,0,0,0,offsetx,offsety+_h*i,scalex,scaley);
         break;
+#endif
       case 3:
         spr.drawJpgFile(*baseFs,filename,0,0,0,0,offsetx,offsety+_h*i,scalex,scaley);
         break;

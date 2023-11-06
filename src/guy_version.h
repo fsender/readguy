@@ -30,11 +30,20 @@
 #ifndef _READGUY_VERSION_H_FILE
 #define _READGUY_VERSION_H_FILE
 
+//在进行版本更迭之前, 需要检查以下文件的版本号是否为最新
+//1. ChangeLog.md
+//2. library.json
+//3. library.properities
+//4. README.md
+//5. git commit 信息
+//6. 下面的三行 以及下面的这个字符串
+//务必保证这些版本号是一致的.
+//另外, 在提交新版本之前, 不要忘记在github上创建release, 否则Arduino IDE会读不到
 #define READGUY_V_MAJOR 1
-#define READGUY_V_MINOR 1
-#define READGUY_V_PATCH 1
+#define READGUY_V_MINOR 3
+#define READGUY_V_PATCH 0
 #define READGUY_VERSION_VAL (READGUY_V_MAJOR*1000+READGUY_V_MINOR*100+READGUY_V_PATCH*10)
-#define READGUY_VERSION "1.1.1"
+#define READGUY_VERSION "1.3.0"
 
 #ifdef ESP8266
 #define _READGUY_PLATFORM "ESP8266"

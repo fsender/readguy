@@ -126,7 +126,7 @@ void ReadguyDriver::ap_setup(){
   IPAddress subnet(255,255,255,0);
   WiFi.softAPConfig(local_IP, gateway, subnet);
   WiFi.softAP("readguy","12345678");
-  Serial.println(F("ap_setup SSID: readguy, Pass: 12345678"));
+  Serial.println(F("[Guy AP] ap_setup SSID: readguy, Pass: 12345678"));
 }
 void ReadguyDriver::server_setup(const String &notify, const serveFunc *serveFuncs, int funcs){
   //启动WiFi服务器端, 这样就可以进行配网工作
@@ -163,7 +163,7 @@ void ReadguyDriver::server_setup(const String &notify, const serveFunc *serveFun
   sv.begin();   
   MDNS.begin("readguy");
   //MDNS.addService("http","tcp",80);
-  Serial.println(F("server_setup done! visit "));
+  Serial.print(F("[Guy server] Done! visit "));
   if(WiFi.getMode() == WIFI_AP) Serial.println(F("192.168.4.1"));
   else Serial.println(WiFi.localIP());
 }
@@ -218,7 +218,7 @@ void ReadguyDriver::handleInitPost(){
   // 此时返回一个文本输入框, 定位到 handleFinalPost 函数
   uint8_t btn_count_=0;
   if(READGUY_cali){ //再次初始化已经初始化的东西, 此时需要关闭一些外设什么的
-    Serial.println(F("Reconfig pins and hardwares..."));
+    Serial.println(F("[Guy Pin] Reconfig pins and hardwares..."));
     READGUY_cali=0;
     READGUY_sd_ok=0;
 #if defined(ESP8266)
@@ -280,7 +280,7 @@ void ReadguyDriver::handleInitPost(){
   uint8_t ck=checkEpdDriver();
   if(btn_count_<2) config_data[16]=0;
   if(btn_count_<3) config_data[17]=0;
-  Serial.println(F("Config OK. Now init devices."));
+  Serial.println(F("[Guy Pin] Config OK. Now init devices."));
   if(ck>=125) {
     const char *pNotify[3]={ PSTR("Necessary pin NOT connected."),\
     PSTR("Pin conflicted."),PSTR("Display not supported.") };
@@ -304,12 +304,13 @@ void ReadguyDriver::handleInitPost(){
   randomch[1] = 48+((rdm>>12)%10);//R2CHAR((rdm>>12)%10);
   randomch[2] = 48+((rdm>> 6)%10);//R2CHAR((rdm>> 6)%10);
   randomch[3] = 48+((rdm    )%10);//R2CHAR((rdm    )%10);
-  Serial.print(F("rand string: "));
+  Serial.print(F("[Guy] rand string: "));
   for(int i=0;i<4;i++) Serial.write(randomch[i]);
   Serial.write('\n');
-  Serial.println(F("Init EPD..."));  //此时引脚io数据已经录入, 如果没有问题, 此处屏幕应当可以显示
+  Serial.println(F("[Guy] Init EPD..."));  //此时引脚io数据已经录入, 如果没有问题, 此处屏幕应当可以显示
   setEpdDriver(); //尝试初始化屏幕
-  Serial.println(F("Init details..."));
+  Serial.println(F("[Guy] Init details..."));
+  setTextSize(1);
   drawCenterString(setSDcardDriver()?"SD Init OK!":"SD Init failed!",width()>>1,(height()>>1)+20);
   setButtonDriver(); //初始化按钮..
   //} //尝试初始化按键, 调用后, 若SD卡初始化成功, READGUY_sd_ok的值会变成1
@@ -321,7 +322,7 @@ void ReadguyDriver::handleInitPost(){
   guy_dev->drv_fullpart(1);
   guy_dev->_display((const uint8_t*)getBuffer());
   spibz--;
-  Serial.println(F("Display done!"));
+  Serial.println(F("[Guy] Display done!"));
   READGUY_cali=1; //显示初始化完成
 }
 void ReadguyDriver::handlePinSetup(){
@@ -592,7 +593,7 @@ void ReadguyDriver::handleFinal(){
   //s+=F("<br/>"); //换行 
   sv.send_P(200, TEXT_HTML, (s+FPSTR(end_html)).c_str());
   if(READGUY_cali == 63){
-    Serial.println(F("Data saved to NVS."));
+    Serial.println(F("[Guy NVS] Data saved to NVS."));
     READGUY_cali = 127;
     nvs_init();
     nvs_write();

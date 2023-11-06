@@ -57,9 +57,7 @@ private:
     int  Init(const unsigned char* lut);
     const unsigned char* lut;
     uint8_t iLut = 15;
-    uint8_t sleeping=1;
-
-    void SetLut(const unsigned char* lut);
+    uint8_t sleeping=0;
 };
 
 #ifdef READGUY_DEV_154A

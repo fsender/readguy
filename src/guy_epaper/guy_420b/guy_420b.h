@@ -56,8 +56,8 @@ public:
     int drv_supportGreyscaling() const { return 16; }
 
 private:
-    uint8_t part_mode = 0;
-    //uint8_t Power_is_on = 0; //初始为未上电
+    uint8_t part_mode = 1;
+    uint8_t Power_is_on = 1; //初始为未上电
     
     static const PROGMEM unsigned char lut_vcom0[];
     static const PROGMEM unsigned char lut_ww[];
@@ -76,8 +76,6 @@ private:
     void Init(uint8_t pt);
     void sendArea();
     void sendAreaRaw();
-
-    void SendLuts(uint8_t lutOption); //0:慢刷, 1:快刷, 2:四阶灰度
     uint8_t customLut, customGreyscale; //customLut 是灰度刷新时的自定义lut
     static const PROGMEM uint8_t greyTable[16];
 };

@@ -76,13 +76,8 @@ drv_base::drv_base(){
   guy_lutArray[4] = lutSlow_b_b;
   guy_lutArray[5] = lutFast_;
 }
-void drv_base::pre(){
-  guy_epdCmd(0x91);
-  send_zoneInfo();
-  guy_epdCmd(0x13);
-}
 void drv_base::epd_init(){
-  if(!Power_is_on) Reset();
+  //if(!Power_is_on) Reset();
     guy_epdCmd(0x01);
     guy_epdParam(0x03);
     guy_epdParam(0x00);
@@ -110,11 +105,11 @@ void drv_base::epd_init(){
 void drv_base::send_zoneInfo(){
   guy_epdCmd(0x90);
   guy_epdParam(0x00);
-  guy_epdParam(0x97);
+  guy_epdParam(epdWidth-1);
   guy_epdParam(0x00);
   guy_epdParam(0x00);
-  guy_epdParam(0x01);
-  guy_epdParam(0x27);
+  guy_epdParam((epdHeight-1)>>8);
+  guy_epdParam((epdHeight-1)&0xff);
   guy_epdParam(0x00);
 }
 void drv_base::SendLuts(bool part_lut){
@@ -134,17 +129,19 @@ void drv_base::SendLuts(bool part_lut){
       }
     }
   }
-  if(!Power_is_on){
+  if(!Power_is_on || Power_is_on==2){
     guy_epdCmd(0x04);
     guy_epdBusy(-60);
     Power_is_on = 1;
   }
 }
 void drv_base::drv_init(){
-  part_mode=0;
-  drv_color(0xff);
+  part_mode = 0;
+  Power_is_on = 0; //初始为未上电
+  //drv_color(0xff);
 }
 void drv_base::drv_fullpart(bool part){ //切换慢刷/快刷功能
+  if(!Power_is_on) part=0;
   if(!part) greyLut=15; //恢复默认的灰度模式
   part_mode = part;
 }
@@ -157,11 +154,11 @@ void drv_base::drv_setDepth(uint8_t i){
 }
 void drv_base::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   BeginTransfer();
-  pre();
-  //send pixel data -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
-  //Total 5624 data written.
-  //for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++)
-  //  guy_epdParam(c);
+  epd_init();
+  SendLuts(part_mode);
+  guy_epdCmd(0x91);
+  send_zoneInfo();
+  guy_epdCmd(0x13);
   for (int i = 0; i < epdHeight*epdWidth/8; i++)
     SpiTransfer(f(i)); //按照给定的RAM写入数据
 
@@ -169,58 +166,33 @@ void drv_base::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   if(part_mode){
     guy_epdCmd(0x30);
     guy_epdParam(0x3a); //0x3a:100Hz, 0x29:150Hz
-    //[EPDrg_BW<>] refresh fx
     send_zoneInfo();
-
     guy_epdCmd(0x12);
     EndTransfer();
-    //[EPDrg_EPD] wait_until_idle fx: 1300
     guy_epdBusy(-200);
-      //[EPDrg_BW<>] writeImageAgain fx
-    //guy_epdCmd(0x91);
-    //send_zoneInfo();
-
-    //guy_epdCmd(0x13);
-      //send image data -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
-      //Total 5624 data written.
-    //guy_epdCmd(0x92);
   }
   else{
-    epd_init();
-    SendLuts(0);
     guy_epdCmd(0x12);
-    //[EPDrg_EPD] wait_until_idle fx: 1600
     EndTransfer();
     guy_epdBusy(-2000);
-
-    //[EPDrg_BW<>] writeImageAgain fx
     BeginTransfer();
     epd_init();
     SendLuts(1);
-    pre();
-    //send image data -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
-    //Total 5624 data written.
-    for (int i = 0; i < epdHeight*epdWidth/8; i++)
-      SpiTransfer(f(i)); //按照给定的RAM写入数据
     guy_epdCmd(0x92);
     EndTransfer();
-    //[EPDrg_BW<>] powerOff fx
-    //guy_epdCmd(0x02);
-    //[EPDrg_EPD] wait_until_idle fx: 20
-    //guy_epdBusy(-20);
   }
 }
 void drv_base::drv_sleep() { //开始屏幕睡眠
-  if(RST_PIN>=0) { //未定义RST_PIN时无法唤醒
-    part_mode = 0;
-    BeginTransfer();
-    guy_epdCmd(0x02); // power off
-    guy_epdBusy(-20);
-    guy_epdCmd(0X10);
-    guy_epdParam(0x01);
-    EndTransfer();
-    Power_is_on = 0;
-  }
+  //if(RST_PIN>=0) { //未定义RST_PIN时无法唤醒
+  BeginTransfer();
+  guy_epdCmd(0x02); // power off
+  guy_epdBusy(-20);
+  guy_epdCmd(0X10);
+  guy_epdParam(0x01);
+  EndTransfer();
+  //}
+  part_mode = 0;
+  Power_is_on = 0;
 }
 
 void drv_base::drv_draw16grey_step(std::function<uint8_t(int)> f, int step){

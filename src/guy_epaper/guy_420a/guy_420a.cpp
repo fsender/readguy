@@ -159,16 +159,6 @@ void drv::epd_Init(void){
   guy_epdCmd(0x11); //Data Entry mode
   guy_epdParam(0x03);    //0x03 or 0x01
 }
-void drv::power_up(){
-  if(!Power_is_on){
-      //Power is not On
-    guy_epdCmd(0x22);
-    guy_epdParam(0xc0);
-    guy_epdCmd(0x20);
-    guy_epdBusy(120);
-    Power_is_on=1;
-  }
-}
 void drv::power_down(){
   Power_is_on=0;
   BeginTransfer();
@@ -187,18 +177,25 @@ void drv::SetLut(const unsigned char* lut){
   }
 }
 void drv::drv_init(){ //初始化屏幕
-  epdFull = 2;
-  drv_color(0xff);
+  Power_is_on = 0; //初始为未上电
+  epdFull = 2;     //初始设为正在休眠
+  //drv_color(0xff);
 }
 void drv::drv_fullpart(bool part){ //初始化慢刷功能
-  if(!part) GreyScaling=0;
   if(epdFull<=1) epdFull = !part; //epdFull==2代表睡眠中, 不能快刷
+  if(epdFull) GreyScaling=0;
 }
 void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   BeginTransfer();
   epd_Init();
   SetMemory();
-  power_up();
+  if(!Power_is_on){ //Power is not On, Power up.
+    guy_epdCmd(0x22);
+    guy_epdParam(0xc0);
+    guy_epdCmd(0x20);
+    guy_epdBusy(120);
+    Power_is_on=1;
+  }
   SetMemory();
   if(epdFull){ //慢刷
     guy_epdCmd(0x26);
@@ -260,13 +257,14 @@ void drv::drv_draw16grey_step(std::function<uint8_t(int)> f, int step){
 }*/
 void drv::drv_sleep() { //开始屏幕睡眠
   if(RST_PIN>=0) { //未定义RST_PIN时无法唤醒
-    epdFull=2; //睡眠
     power_down();
     BeginTransfer();
     guy_epdCmd(0x10); // deep sleep mode
     guy_epdParam(0x01);     // enter deep sleep
     EndTransfer();
   }
+  epdFull=2; //睡眠
+  Power_is_on=0;
 }
 }
 #endif /* END OF FILE. ReadGuy project.

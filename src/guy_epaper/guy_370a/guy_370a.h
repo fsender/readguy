@@ -47,9 +47,9 @@ public:
     int drv_supportGreyscaling() const { return 16; }
     void drv_setDepth(uint8_t i); //设置显示颜色深度, 不支持的话什么都不做
 private:
-    uint8_t part_mode;
+    uint8_t part_mode=1;
     uint8_t greyScaling = 15;
-    uint8_t sleeping = true;
+    uint8_t sleeping = false;
     int  Init(void);
     void Load_LUT(unsigned char mode);
 };

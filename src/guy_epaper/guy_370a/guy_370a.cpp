@@ -103,10 +103,14 @@ void drv::Load_LUT(unsigned char mode) {
 }
 
 void drv::drv_init(){ //初始化屏幕
+  sleeping = 1;
   Init();
-  drv_color(0xff);
+  sleeping = 1;
+  part_mode=0;
+  //drv_color(0xff);
 }
 void drv::drv_fullpart(bool part){ //切换慢刷/快刷功能
+  if(sleeping) return;
   if(!part) {
     greyScaling=15; //恢复默认的灰度模式
     BeginTransfer();
@@ -142,8 +146,9 @@ void drv::drv_sleep() { //开始屏幕睡眠
     guy_epdCmd(0X10);   //deep sleep
     guy_epdParam(0x03);
     EndTransfer();
-    sleeping = true;
   }
+  sleeping = true;
+  part_mode=0;
 }
 
 void drv::drv_setDepth(uint8_t i){ //设置显示颜色深度, 不支持的话什么都不做

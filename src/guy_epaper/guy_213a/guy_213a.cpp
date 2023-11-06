@@ -34,7 +34,7 @@ namespace guydev_213A{
 
 const PROGMEM uint8_t drv::_ed_lut_full[] = {   // command //慢刷lut
   0x22, 0x55, 0xaa, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-  0x00, 0x13, 0x13, 0x13, 0x13, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+  0x00, 0x13, 0x16, 0x16, 0x13, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 const PROGMEM uint8_t drv::_ed_lut_part[] = {   // command //快刷lut
   0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -106,12 +106,14 @@ void drv::epd_Init(void){
 }
 void drv::drv_init(){ //初始化屏幕
   epdFull = 1;
-  BeginTransfer();
+  epd_PowerOn = 0;
+  /*BeginTransfer();
   epd_Init();
-  EndTransfer();
-  drv_color(0xff);
+  EndTransfer();*/
+  //drv_color(0xff);
 }
 void drv::drv_fullpart(bool part){ //初始化慢刷功能
+  if(!epd_PowerOn) part=0; //未上电 无法局刷
   //if(part==epdFull) return;
   if(!part) iLut=15; //恢复默认的灰度模式
   epdFull = !part;
@@ -144,21 +146,22 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   guy_epdBusy(epdFull?1600:310);
 }
 void drv::drv_sleep() { //开始屏幕睡眠
-  if(RST_PIN<0) return; //无法唤醒
-  BeginTransfer();
-  if(epd_PowerOn){
-    guy_epdCmd(0x22);
-    guy_epdParam(0xc3);
-    guy_epdCmd(0x20);
-    guy_epdBusy(200);
-    epd_PowerOn = 0;
-    epdFull = 1; //强制设置为慢刷新模式
+  if(RST_PIN>=0){ //RST_PIN<0 无法唤醒
+    BeginTransfer();
+    if(epd_PowerOn){
+      guy_epdCmd(0x22);
+      guy_epdParam(0xc3);
+      guy_epdCmd(0x20);
+      guy_epdBusy(200);
+    }
+    guy_epdCmd(0x10); //enter deep sleep
+    guy_epdParam(0x01);
+    EndTransfer();
+    DelayMs(200);
+    DigitalWrite(RST_PIN, LOW);
   }
-	guy_epdCmd(0x10); //enter deep sleep
-	guy_epdParam(0x01);
-  EndTransfer();
-	DelayMs(200);
-	DigitalWrite(RST_PIN, LOW);
+  epd_PowerOn = 0;
+  epdFull = 1; //强制设置为慢刷新模式
 }
 }
 #endif /* END OF FILE. ReadGuy project.

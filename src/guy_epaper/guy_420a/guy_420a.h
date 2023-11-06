@@ -53,14 +53,13 @@ private:
   void epd_Init(void);
 	void SetLut(const unsigned char* lut); 
   uint8_t Power_is_on = 0; //初始为未上电
-  uint8_t epdFull = 2; //是partical模式/快速刷新模式 0快刷, 1慢刷
+  uint8_t epdFull = 1; //是partical模式/快速刷新模式 0快刷, 1慢刷
   uint8_t GreyScaling = 0; //是否正在灰度显示
   uint8_t GreyScalingHighQuality = 0; //是否正在16阶高品质灰度显示
   static const PROGMEM unsigned char epd42_lut_full[];
   static const PROGMEM unsigned char lut_213_B72[];
   static const PROGMEM unsigned char lut_213_B72_Full[];
   static const PROGMEM unsigned char lut_213_B72_16grey[];
-  void power_up();
   void power_down();
   //std::function<void(int)> send; //此处不能用 void (*send)(int); 是因为lambda函数是std的
 };

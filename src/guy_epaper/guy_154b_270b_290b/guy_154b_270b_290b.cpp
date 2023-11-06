@@ -53,7 +53,7 @@ namespace guydev_154B_270B_290B{
   0x22,0x17,0x41,0xB0,0x32,0x28
 };*/
 
-const unsigned char drvSSD168x::WS_20_30[48] =
+const unsigned char drvSSD168x::WS_20_30[42] =
 {											/*
   0x80,	0x66,	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	0x40,	0x0,	0x0,	0x0,
   0x10,	0x66,	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	0x20,	0x0,	0x0,	0x0,
@@ -93,40 +93,25 @@ const unsigned char drvSSD168x::WS_20_30[48] =
   0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,					
   0x0,	0x0,	0x0,	0x0,	0x0,	0x0,	0x0,					*/
   0x22,	0x22,	0x22,	0x22,	0x22,	0x22,	0x0,	0x0,	0x0,			
-  0x22,	0x17,	0x41,	0xA8,	0x32,	0x28
 };	
 const unsigned char drvSSD168x::VSH_table[32]=
-{0x00,0x24,0x24,0x24,0x25,0x26,0x27,0x28,0x2a,0x2c,0x2e,0x32,0x35,0x39,0x3d,0x41,
- 0x46,0x45,0x44,0x42,0x41,0x40,0x3f,0x3f,0x3c,0x39,0x36,0x34,0x32,0x31,0x30,0x2f};
+{/*0x00,0xbc,0xc1,0xc6,0xcb,0x23,0x26,0x28,0x2a,0x2c,0x2e,0x32,0x35,0x39,0x3d,0x41,*/
+  0x00,0x24,0x28,0x2c,0x30,0x33,0x36,0x38,0x3a,0x3c,0x3e,0x40,0x42,0x44,0x45,0x46,
+  0x00,0x41,0x3c,0x37,0x32,0x2d,0x28,0x23,0xcb,0xc6,0xc1,0xbc,0xb7,0xb2,0xb0,0xae};
+
 
 //以下代码均为我 FriendshipEnder 原创, 呵呵哒~~
-void drvSSD168x::epd_init() {
-  if(epd_PowerOn==0) {
-    Reset();
-    epd_PowerOn=1;
-    _part=0;
-    iLut=15;
-  }
-	guy_epdCmd(0x12);  //SWRESET
-	guy_epdBusy(10);   
-	
-	guy_epdCmd(0x01); //Driver output control      
-	guy_epdParam((epdHeight-1)&0xff);
-	guy_epdParam(((epdHeight-1)>>8)&0xff);
-	guy_epdParam(0x00);
-	
-	guy_epdCmd(0x11); //data entry mode       
-	guy_epdParam(0x03);
-	SetMemory();
-	SetLut();
-}
-
-void drvSSD168x::DisplayFrame(void) {
-  guy_epdCmd(0x22);
-  guy_epdParam(_part?0x0f:0xc7);
-  guy_epdCmd(0x20);
-}
 void drvSSD168x::SetLut() {       
+	guy_epdCmd(0x3f);
+	guy_epdParam(greyScaling?0x07:0x22);
+	guy_epdCmd(0x03);	// gate voltage
+	guy_epdParam(0x17);
+	guy_epdCmd(0x04);	// source voltage
+	guy_epdParam(greyScaling?pgm_read_byte(VSH_table+16+iLut):pgm_read_byte(VSH_table+iLut));
+	guy_epdParam(0xA8);	// VSH2
+	guy_epdParam(0x32);	// VSL
+	guy_epdCmd(0x2c);		// VCOM
+	guy_epdParam(0x28);
 	unsigned char i;
 	guy_epdCmd(0x32);
   if(_part){
@@ -134,10 +119,10 @@ void drvSSD168x::SetLut() {
       guy_epdParam(i==1?0x80:(i==(greyScaling?0:2)?0x40:0x00));
       for(int j=0;j<11;j++) guy_epdParam(0);
     }
-    guy_epdParam(greyScaling?(iLut<5?4-((iLut+1)>>1):1):iLut);
+    guy_epdParam(greyScaling?1:iLut);
     for(i=0;i<83;i++) guy_epdParam(0);
-    for(i=0;i<6;i++) guy_epdParam(0x22);
-    for(i=0;i<3;i++) guy_epdParam(0);
+    guy_epdParam(0x22);
+    for(i=0;i<8;i++) guy_epdParam(0);
   }
   else{
     //for(i=0; i<153; i++) guy_epdParam(lut[i]==0xff?iLut:lut[i]); 
@@ -151,29 +136,21 @@ void drvSSD168x::SetLut() {
     for(i=0;i<66;i++) guy_epdParam(0);
     for(i=0;i<9;i++) guy_epdParam(pgm_read_byte(WS_20_30+i+33));
   }
-	guy_epdCmd(0x3f);
-	guy_epdParam(pgm_read_byte(WS_20_30+42));
-	guy_epdCmd(0x03);	// gate voltage
-	guy_epdParam(pgm_read_byte(WS_20_30+43));
-	guy_epdCmd(0x04);	// source voltage
-	guy_epdParam(greyScaling?pgm_read_byte(VSH_table+16+iLut):pgm_read_byte(VSH_table+iLut));
-	guy_epdParam(pgm_read_byte(WS_20_30+45));	// VSH2
-	guy_epdParam(pgm_read_byte(WS_20_30+46));	// VSL
-	guy_epdCmd(0x2c);		// VCOM
-	guy_epdParam(pgm_read_byte(WS_20_30+47));
 }
 
 void drvSSD168x::drv_init(){
   _part=0;
-  drv_color(0xffu);
+  epd_PowerOn=0;
+  //drv_color(0xffu);
 }
 void drvSSD168x::drv_fullpart(bool part){ //切换慢刷/快刷功能
+  if(!epd_PowerOn) part=0; //未上电 无法局刷
   if(!part) { iLut=15; greyScaling=0; }
   _part=part;
 }
 void drvSSD168x::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   BeginTransfer();
-  if(_part && epd_PowerOn){
+  if(_part){
     //Reset();
     SetLut();
     guy_epdCmd(0x37); 
@@ -186,7 +163,26 @@ void drvSSD168x::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
     guy_epdCmd(0x20); 
     guy_epdBusy(140);  
   }
-  else epd_init();
+  else{
+    if(epd_PowerOn==0) {
+      Reset();
+      epd_PowerOn=1;
+      _part=0;
+      iLut=15;
+    }
+    guy_epdCmd(0x12);  //SWRESET
+    guy_epdBusy(10);   
+    
+    guy_epdCmd(0x01); //Driver output control      
+    guy_epdParam((epdHeight-1)&0xff);
+    guy_epdParam(((epdHeight-1)>>8)&0xff);
+    guy_epdParam(0x00);
+    
+    guy_epdCmd(0x11); //data entry mode       
+    guy_epdParam(0x03);
+    SetMemory();
+    SetLut();
+  }
   SetMemory();
   guy_epdCmd(0x24);
   for (int i = 0; i < epdHeight*epdWidth / 8; i++) 
@@ -196,7 +192,9 @@ void drvSSD168x::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
     for (int i = 0; i < epdHeight*epdWidth / 8; i++) 
       SpiTransfer(f(i));
   }
-  DisplayFrame();
+  guy_epdCmd(0x22);
+  guy_epdParam(_part?0x0f:0xc7);
+  guy_epdCmd(0x20);
   EndTransfer();
   guy_epdBusy(_part?600:2300);
 }
@@ -206,8 +204,8 @@ void drvSSD168x::drv_sleep() { //开始屏幕睡眠
     guy_epdCmd(0x10);
     guy_epdParam(0x01);
     EndTransfer();
-    epd_PowerOn=0;
   }
+  epd_PowerOn=0;
 }
 void drvSSD168x::drv_setDepth(uint8_t i){ //设置显示颜色深度, 不支持的话什么都不做
   if(i>0 && i<16) {

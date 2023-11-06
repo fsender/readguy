@@ -49,35 +49,55 @@ void drv::Init(uint8_t pt) {
   Reset();
   guy_epdCmd(0x00); //Software reset
   guy_epdParam(0x00);
+  delayMicroseconds(40);
   guy_epdCmd(0x00);
   guy_epdParam(0x1f);
   guy_epdParam(0x0d);
+  delayMicroseconds(40);
   guy_epdCmd(0x50);
   guy_epdParam(0x97);
+  delayMicroseconds(40);
   guy_epdCmd(0x01);
   guy_epdParam(0x03);
   guy_epdParam(0x00);
   guy_epdParam(0x2b);
   guy_epdParam(0x2b);
+  delayMicroseconds(40);
   guy_epdCmd(0x06);
   guy_epdParam(0x17);
   guy_epdParam(0x17);
   guy_epdParam(0x17);
+  delayMicroseconds(40);
   guy_epdCmd(0x00);
   guy_epdParam(0x3f);
+  delayMicroseconds(40);
   guy_epdCmd(0x30);
   guy_epdParam(0x3a);
+  delayMicroseconds(40);
   guy_epdCmd(0x61);
   guy_epdParam(0x01);
   guy_epdParam(0x90);
   guy_epdParam(0x01);
   guy_epdParam(0x2c);
+  delayMicroseconds(40);
   guy_epdCmd(0x82); //vcom setting: 0x00:-0.1V, 0x3a: -3.0V
   guy_epdParam(0x1a);
+  delayMicroseconds(40);
   guy_epdCmd(0x50);
   guy_epdParam(0xd7);
-  SendLuts(pt?1:0); //不知为何, 此处需要快刷lut
+  delayMicroseconds(40);
+  //不知为何, 此处需要快刷lut
+  for(uint8_t i=0;i<=4;i++){ //for(uint8_t i=0;i<=(lutOption==2?5:4);i++){
+    guy_epdCmd(i+0x20);
+    for(int j=0;j<(pt?6:(i+pt==0?44:42));j++){
+      if(j==2 && customGreyscale) guy_epdParam(63);
+      else if(j==3 && i!=2) guy_epdParam(customLut);
+      else guy_epdParam(j<18?pgm_read_byte(guy_lutArray[i+(pt?1:0)*5]+j):0x00);
+      delayMicroseconds(40);
+    }
+  }
   if(pt!=2) guy_epdCmd(0x04);
+  delayMicroseconds(40);
 }
 
 void drv::sendArea(){
@@ -95,18 +115,6 @@ void drv::sendAreaRaw(){
   guy_epdParam(0x01);
   guy_epdParam(0x2b);
   guy_epdParam(0x01);
-}
-void drv::SendLuts(uint8_t lutOption){ // -------- 在此发送你的Lut数据 --------<<<<
-  //Serial.printf("SendLuts fx: %d\n",lutOption);
-  for(uint8_t i=0;i<=4;i++){ //for(uint8_t i=0;i<=(lutOption==2?5:4);i++){
-    guy_epdCmd(i+0x20);
-    //Serial.printf("%d th lut loaded.\n",i+lutOption*5);
-    for(int j=0;j<(lutOption==1?6:(i+lutOption==0?44:42));j++){
-      if(j==2 && customGreyscale) guy_epdParam(63);
-      else if(j==3 && i!=2) guy_epdParam(customLut);
-      else guy_epdParam(j<18?pgm_read_byte(guy_lutArray[i+lutOption*5]+j):0x00);
-    }
-  }
 }
 const PROGMEM unsigned char drv::lut_vcom0[] ={
   0x00, 0x08, 0x08, 0x00, 0x00, 0x02,  
@@ -153,6 +161,7 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
     //[EPDrg_BW<>] refresh fx
   }
   else{
+    Power_is_on=1;
     guy_epdCmd(0x10);
     //刷新数据
     for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++)
@@ -198,15 +207,20 @@ const PROGMEM uint8_t drv::greyTable[16]={
   32,23,18,15,12,10,9,8,
   7,6,5,5,5,5,5,0
 };
-
 void drv::drv_init(){
-  //Init(0);
-  drv_color(0xffu);
+  part_mode=0;
+  Power_is_on=0;
+  BeginTransfer();
+  Init(0);
+  EndTransfer();
+  //drv_color(0xffu);
 }
 void drv::drv_fullpart(bool part){ //切换慢刷/快刷功能
-  if(!part) customLut = CUSTOM_LUT_DISABLE;
-  part_mode = part;
-  //Init(part);
+  if(Power_is_on) {
+    if(!part) customLut = CUSTOM_LUT_DISABLE;
+    part_mode = part;
+    //Init(part);
+  }
 }
 void drv::drv_sleep() { //开始屏幕睡眠
   if(RST_PIN>=0){ //未定义RST_PIN时无法唤醒
@@ -219,6 +233,8 @@ void drv::drv_sleep() { //开始屏幕睡眠
     guy_epdParam(0xA5);
     EndTransfer();
   }
+  Power_is_on=0;
+  part_mode=0;
 }
 }
 #endif /* END OF FILE. ReadGuy project.

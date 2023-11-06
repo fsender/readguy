@@ -48,8 +48,8 @@ ReadguyDriver::ReadguyDriver(){
   READGUY_cali = 0; // config_data[0] 的初始值为0
   READGUY_sd_ok = 0; //初始默认SD卡未成功初始化
   READGUY_buttons = 0; //初始情况下没有按钮
-}
-uint8_t ReadguyDriver::init(uint8_t WiFiSet){ //WiFiSet: 是否保持AP服务器一直处于打开状态
+} //WiFiSet: 是否保持AP服务器一直处于打开状态
+uint8_t ReadguyDriver::init(uint8_t WiFiSet,bool initepd/* ,int g_width,int g_height */){
   if(READGUY_cali==127) //已经初始化过了一次了, 为了防止里面一些volatile的东西出现问题....还是退出吧
     return 0;
 #ifdef DYNAMIC_PIN_SETTINGS
@@ -77,7 +77,7 @@ uint8_t ReadguyDriver::init(uint8_t WiFiSet){ //WiFiSet: 是否保持AP服务器
   else{ //看来NVS有数据, //从NVS加载数据, 哪怕前面的数据刚刚写入, 还没读取
     if(WiFiSet>=2) WiFi.begin(); //连接到上次存储在flash NVS中的WiFi.
     else if(WiFiSet==1) ap_setup();
-    if(checkEpdDriver()!=127) setEpdDriver();  //初始化屏幕
+    if(checkEpdDriver()!=127) setEpdDriver(initepd/* ,g_width,g_height */);  //初始化屏幕
     else for(;;); //此处可能添加程序rollback等功能操作(比如返回加载上一个程序)
     setSDcardDriver();
     setButtonDriver();
@@ -85,12 +85,12 @@ uint8_t ReadguyDriver::init(uint8_t WiFiSet){ //WiFiSet: 是否保持AP服务器
 #endif
   nvs_deinit();
 #else
-  if(checkEpdDriver()!=127) setEpdDriver();  //初始化屏幕
+  if(checkEpdDriver()!=127) setEpdDriver(initepd/* ,g_width,g_height */);  //初始化屏幕
   else for(;;); //此处可能添加程序rollback等功能操作(比如返回加载上一个程序)
   setSDcardDriver();
   setButtonDriver();
 #endif
-  Serial.println(F("init done."));
+  Serial.println(F("[Guy init] init done."));
   READGUY_cali=127;
   return READGUY_sd_ok;
 }
@@ -101,7 +101,7 @@ uint8_t ReadguyDriver::checkEpdDriver(){
 #else 
 #define TEST_ONLY_VALUE 3
 #endif
-  Serial.printf_P(PSTR("READGUY_shareSpi? %d\n"),READGUY_shareSpi);
+  Serial.printf_P(PSTR("[Guy SPI] shareSpi? %d\n"),READGUY_shareSpi);
   for(int i=TEST_ONLY_VALUE;i<8;i++){
     if(i<7 && config_data[i]<0) return 125;//必要的引脚没连接
     for(int j=1;j<=8-i;j++)
@@ -149,7 +149,7 @@ uint8_t ReadguyDriver::checkEpdDriver(){
     case READGUY_DEV_270B:  guy_dev = new guydev_154B_270B_290B  ::dev270B; break;
 #endif
     default: 
-      Serial.println(F("[ERR] EPD DRIVER IC NOT SUPPORTED!\n"));
+      Serial.println(F("[GUY ERR] EPD DRIVER IC NOT SUPPORTED!\n"));
       return 127;
   }
 #if (defined(ESP8266))
@@ -169,26 +169,27 @@ uint8_t ReadguyDriver::checkEpdDriver(){
   epd_spi->begin(READGUY_epd_sclk,READGUY_shareSpi?READGUY_sd_miso:-1,READGUY_epd_mosi);
   guy_dev->IfInit(*epd_spi, READGUY_epd_cs, READGUY_epd_dc, READGUY_epd_rst, READGUY_epd_busy);
 #endif
-  Serial.println(F("IfInit OK"));
+  Serial.println(F("[Guy SPI] drvBase Init OK"));
   return READGUY_epd_type;
 }
-void ReadguyDriver::setEpdDriver(int g_width,int g_height){
+void ReadguyDriver::setEpdDriver(bool initepd/* ,int g_width,int g_height */){
   guy_dev->spi_tr_release = in_release;
   guy_dev->spi_tr_press   = in_press;
-  guy_dev->drv_init(); //初始化epd驱动层
-  if(g_width) guy_width = g_width;
-  else guy_width = guy_dev->drv_width(); //宽度必须是8的倍数, 但这个可以由GFX自动计算
-  if(g_height) guy_height = g_height;
-  else guy_height = guy_dev->drv_height();
-  Serial.println(F("EPD init OK"));
+  if(initepd) guy_dev->drv_init(); //初始化epd驱动层
+  //if(g_width) guy_width = g_width;
+  //else guy_width = guy_dev->drv_width(); //宽度必须是8的倍数, 但这个可以由GFX自动计算
+  //if(g_height) guy_height = g_height;
+  //else guy_height = guy_dev->drv_height();
+  Serial.println(F("[Guy EPD] EPD init OK"));
   //以下依赖于你的图形驱动
   setColorDepth(1); //单色模式
   createPalette();  //初始化颜色系统
-  Serial.printf_P(PSTR("mono set: w: %d, h: %d\n"),guy_width,guy_height);
+  Serial.printf_P(PSTR("[Guy EPD] mono set: w: %d, h: %d\n"),guy_dev->drv_width(),guy_dev->drv_height());
    //创建画布. 根据LovyanGFX的特性, 如果以前有画布会自动重新生成新画布
   //此外, 即使画布宽度不是8的倍数(如2.13寸单色),也支持自动补全8的倍数 ( 250x122 => 250x128 )
   //为了保证图片显示功能的正常使用, 高度也必须是8的倍数.
-  createSprite(guy_width,(guy_height+7)&0x7ffffff8);
+  createSprite(guy_dev->drv_width(),(guy_dev->drv_height()+7)&0x7ffffff8);
+  //这里发现如果用自定义的内存分配方式会更好一些. 不会导致返回的height不对. 但是因为LovyanGFX库未更新 暂时不能这么用.
   //setRotation(1); //旋转之后操作更方便
   setRotation(0);
   setFont(&fonts::Font0);
@@ -226,6 +227,7 @@ bool ReadguyDriver::setSDcardDriver(){
   }
   else READGUY_sd_ok=0; //引脚不符合规则,或冲突或不可用
   if(!READGUY_sd_ok){
+    Serial.println(F("[Guy SD] SD Init Failed!"));
     //guyFS().begin(); //初始化内部FS
 #ifdef READGUY_USE_LITTLEFS
     LittleFS.begin();
@@ -387,21 +389,22 @@ void ReadguyDriver::display(std::function<uint8_t(int)> f, bool part){
     //in_release(); //恢复
   }
 }
-void ReadguyDriver::drawImage(LGFX_Sprite &spr,uint16_t x,uint16_t y) { 
-  if(READGUY_cali==127) guy_dev->drv_drawImage(*this, spr, x, y); 
+void ReadguyDriver::drawImage(LGFX_Sprite &base, LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw, uint16_t zoomh) { 
+  if(READGUY_cali==127) guy_dev->drv_drawImage(base, spr, x, y, 0, zoomw, zoomh); 
 }
-void ReadguyDriver::drawImageStage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint8_t stage,uint8_t totalstage) {
+void ReadguyDriver::drawImageStage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint8_t stage,
+  uint8_t totalstage,uint16_t zoomw,uint16_t zoomh) {
   if(READGUY_cali!=127 || stage>=totalstage) return;
-  guy_dev->drv_drawImage(*this, spr, x, y, (totalstage<=1)?0:(stage==0?1:(stage==(totalstage-1)?3:2)));
+  guy_dev->drv_drawImage(*this, spr, x, y, (totalstage<=1)?0:(stage==0?1:(stage==(totalstage-1)?3:2)),zoomw,zoomh);
 }
 void ReadguyDriver::setDepth(uint8_t d){ 
   if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling()) guy_dev->drv_setDepth(d); 
 }
-void ReadguyDriver::draw16grey(LGFX_Sprite &spr,uint16_t x,uint16_t y){
+void ReadguyDriver::draw16grey(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw,uint16_t zoomh){
   if(READGUY_cali!=127) return;
   if(guy_dev->drv_supportGreyscaling() && (spr.getColorDepth()&0xff)>1)
-    return guy_dev->drv_draw16grey(*this,spr,x,y);
-  guy_dev->drv_drawImage(*this, spr, x, y);
+    return guy_dev->drv_draw16grey(*this,spr,x,y,zoomw,zoomh);
+  guy_dev->drv_drawImage(*this, spr, x, y, 0, zoomw, zoomh);
 }
 void ReadguyDriver::draw16greyStep(int step){
   if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling() && step>0 && step<16 ){
@@ -417,7 +420,7 @@ void ReadguyDriver::draw16greyStep(std::function<uint8_t(int)> f, int step){
 }
 void ReadguyDriver::invertDisplay(){
   if(READGUY_cali==127){
-    const int pixels=((guy_width+7)>>3)*guy_height;
+    const int pixels=((guy_dev->drv_width()+7)>>3)*guy_dev->drv_height();
     for(int i=0;i<pixels;i++)
       ((uint8_t*)(getBuffer()))[i]=uint8_t(~(((uint8_t*)(getBuffer()))[i]));
   }
@@ -452,7 +455,7 @@ bool ReadguyDriver::nvs_read(){
     if(i>=8) config_data[i-8] = rd;
     else s[i]=(char)rd;
   }
-  Serial.printf("Get NVS...%d\n", config_data[0]);
+  Serial.printf("[Guy NVS] Get NVS...%d\n", config_data[0]);
   return !(strcmp_P(s,projname));
 }
 void ReadguyDriver::nvs_write(){

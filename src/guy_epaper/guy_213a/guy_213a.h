@@ -56,8 +56,8 @@ public:
   int drv_supportGreyscaling() const { return 16; }
 private:
   void epd_Init(void);
-  uint8_t epdFull;     //是partical模式/快速刷新模式 0快刷, 1慢刷
-  uint8_t epd_PowerOn = 0; //是否上电
+  uint8_t epdFull=0;     //是partical模式/快速刷新模式 0快刷, 1慢刷
+  uint8_t epd_PowerOn = 1; //是否上电
   uint8_t iLut = 15; //颜色深度(灰度模式用)
  // uint8_t dc_d = 0;        //dc引脚状态 0 command, 1 data
   static const PROGMEM uint8_t _ed_lut_full[];

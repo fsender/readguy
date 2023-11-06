@@ -52,16 +52,13 @@ protected:
   int epdWidth;
   int epdHeight;
 private:
-  uint8_t _part;
-  uint8_t epd_PowerOn = 0;
+  uint8_t _part=1;
+  uint8_t epd_PowerOn = 1;
   uint8_t iLut=15;
   uint8_t greyScaling=0;
   //static const unsigned char _WF_PARTIAL_2IN9[48] ;
-  static const unsigned char WS_20_30[48] ;
+  static const unsigned char WS_20_30[42] ;
   static const unsigned char VSH_table[32];
-
-  void epd_init();
-  void DisplayFrame(void);
 	void SetLut();
 };
 

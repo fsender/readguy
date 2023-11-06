@@ -70,9 +70,11 @@ int readguyEpdBase::IfInit(SPIClass &c,int8_t cs,int8_t dc,int8_t rst,int8_t bus
   RST_PIN = rst;
   BUSY_PIN = busy;
   if(CS_PIN>=0)   pinMode(CS_PIN  , OUTPUT);
+  DigitalWrite(CS_PIN,HIGH);
   if(RST_PIN>=0)  pinMode(RST_PIN , OUTPUT);
   DigitalWrite(RST_PIN,HIGH);
   if(DC_PIN>=0)   pinMode(DC_PIN  , OUTPUT);
+  DigitalWrite(DC_PIN,HIGH);
   if(BUSY_PIN>=0) pinMode(BUSY_PIN, INPUT); 
   _spi = &c;
 
@@ -157,7 +159,8 @@ void readguyEpdBase::Reset(uint32_t minTime)
 }
 //void readguyEpdBase::drv_draw16grey(const uint8_t *d16bit){        //不支持的话什么都不做
 
-void readguyEpdBase::drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,int o){
+void readguyEpdBase::drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,int o,
+  uint16_t fw, uint16_t fh){
 #ifndef FLOYD_STEINBERG_DITHERING
   static const uint8_t bayer_tab [64]={
      0, 32,  8, 40,  2, 34, 10, 42,
@@ -170,30 +173,32 @@ void readguyEpdBase::drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_
     63, 31, 55, 23, 61, 29, 53, 21
   };
 #endif
-  const uint32_t w = (spr.width()+7)>>3;
-  if((!w) || (!spr.height())) return;
+  if(!fw) fw=spr.width();
+  if(!fh) fh=spr.height();
+  if((!fw) || (!fh)) return;
   if(o==0 || o==1){
     readBuff = new uint16_t[spr.width()];
 #ifdef FLOYD_STEINBERG_DITHERING
-    floyd_tab[0] = new int16_t [spr.width()];
-    floyd_tab[1] = new int16_t [spr.width()];
-    for(int j=0;j<spr.width();j++){ floyd_tab[0][j] = 0; floyd_tab[1][j] = 0; }
+    floyd_tab[0] = new int16_t [fw];
+    floyd_tab[1] = new int16_t [fw];
+    for(int j=0;j<fw;j++){ floyd_tab[0][j] = 0; floyd_tab[1][j] = 0; }
  #endif
-    writeBuff = new uint8_t[w];
+    writeBuff = new uint8_t[(fw+7)>>3];
   }
-  sprbase.fillRect(x,y,spr.width(),spr.height(),1);
-  for(int32_t i=y;i<(int32_t)spr.height()+y;i++){
-    spr.readRect(0,i-y,spr.width(),1,readBuff);
+  sprbase.fillRect(x,y,fw,fh,1);
+  for(int32_t i=y;i<(int32_t)fh+y;i++){
+    spr.readRect(0,(i-y)*spr.height()/fh,spr.width(),1,readBuff);
 #ifdef FLOYD_STEINBERG_DITHERING
     uint_fast8_t buff8bit=0;
-    for(int32_t j=0;j<spr.width();j++){
-      int32_t flodelta = floyd_tab[i&1][j]+(int32_t)((greysc(readBuff[j])<<8)|greysc(readBuff[j]));
+    for(int32_t j=0;j<fw;j++){
+      int gv=greysc(readBuff[j*spr.width()/fw]);
+      int32_t flodelta = floyd_tab[i&1][j]+(int32_t)((gv<<8)|gv);
       if(flodelta>=0x8000) { 
         //spr.drawPixel(j,i,1);
         buff8bit |= 1<<((~j)&7);
         flodelta -= 0xffff;
       }
-      if((j&7)==7 || j==((int32_t)spr.width()-1)){
+      if((j&7)==7 || j==((int32_t)fw-1)){
         writeBuff[j>>3]=buff8bit;
         buff8bit=0;
       }
@@ -205,23 +210,23 @@ void readguyEpdBase::drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_
       }
       if(j) { floyd_tab[!(i&1)][j-1] += (flodelta*3)>>4; }
             { floyd_tab[!(i&1)][j  ] += (flodelta*5)>>4; }*/
-      if(j!=spr.width()-1) 
+      if(j!=fw-1) 
             { floyd_tab[i&1]   [j+1] += (flodelta*7)>>4; }
       if(j) { floyd_tab[!(i&1)][j-1] += (flodelta*3)>>4; }
             { floyd_tab[!(i&1)][j  ] += (flodelta*5)>>4; }
-      if(j!=spr.width()-1) 
+      if(j!=fw-1) 
             { floyd_tab[!(i&1)][j+1] += (flodelta  )>>4; }
     }
-    for(int floi=0;floi<spr.width();floi++) floyd_tab[i&1][floi]=0;
+    for(int floi=0;floi<fw;floi++) floyd_tab[i&1][floi]=0;
 #else
     for(int32_t j=0;j<w;j++){
       uint_fast8_t buff8bit=0;
       for(uint_fast8_t b=0;b<8;b++)
-        buff8bit |= (bayer_tab[(b<<3)|(i&7)]<(greysc(readBuff[(j<<3)+b])>>2))<<(7-b);
+        buff8bit |= (bayer_tab[(b<<3)|(i&7)]<(greysc(readBuff[j*spr.width()/fw])>>2))<<(7-b);
       writeBuff[j]=buff8bit;
     }
 #endif
-    sprbase.drawBitmap(x,i,writeBuff,spr.width(),1,1,0);
+    sprbase.drawBitmap(x,i,writeBuff,fw,1,1,0);
   }
   //_display((const uint8_t*)sprbase.getBuffer()); //显示
   if(o==0 || o==3){
@@ -234,19 +239,21 @@ void readguyEpdBase::drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_
   }
 }
 //不支持的话使用单色抖动刷屏
-void readguyEpdBase::drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y){
+void readguyEpdBase::drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,
+  uint16_t fw, uint16_t fh){
   //Serial.println("drv_draw16grey fx");
-  const uint32_t w = (spr.width()+7)>>3;
-  if((!w) || (!spr.height())) return;
+  if(!fw) fw=spr.width();
+  if(!fh) fh=spr.height();
+  if((!fw) || (!fh)) return;
   readBuff = new uint16_t[spr.width()];
   if(_quality&2){
 #ifdef FLOYD_DITHERING_16GREY
-    floyd_tab[0] = new int16_t [spr.width()];
-    floyd_tab[1] = new int16_t [spr.width()];
+    floyd_tab[0] = new int16_t [fw];
+    floyd_tab[1] = new int16_t [fw];
 #endif
   }
-  writeBuff = new uint8_t[w];
-  sprbase.fillRect(x,y,spr.width(),spr.height(),1);
+  writeBuff = new uint8_t[(fw+7)>>3];
+  sprbase.fillRect(x,y,fw,fh,1);
   bool negativeOrder=(drv_supportGreyscaling()==-16);
   drv_fullpart(0);
   //_display((const uint8_t*)sprbase.getBuffer()); //先对区域慢刷白屏确保颜色正确
@@ -254,33 +261,31 @@ void readguyEpdBase::drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16
   drv_fullpart(1);
   for(uint_fast8_t k=1;k<16;k++){ //亮度为15的不用绘制,因为本来就是白色
 #ifdef FLOYD_DITHERING_16GREY
-    if(_quality&2) for(int j=0;j<spr.width();j++){ floyd_tab[0][j] = 0; floyd_tab[1][j] = 0; }
+    if(_quality&2) for(int j=0;j<fw;j++){ floyd_tab[0][j] = 0; floyd_tab[1][j] = 0; }
 #endif
-    for(int i=y;i<spr.height()+y;i++){
+    for(int i=y;i<(int32_t)fh+y;i++){
       uint_fast8_t buff8bit=0;
-      spr.readRect(0,i-y,spr.width(),1,readBuff);
-      for(int32_t j=0;j<spr.width();j++){
+      spr.readRect(0,(i-y)*spr.height()/fh,spr.width(),1,readBuff);
+      for(int32_t j=0;j<fw;j++){
         //for(uint_fast8_t b=0;b<8;b++){
 #ifdef FLOYD_DITHERING_16GREY
         uint_fast8_t cg=0;
         if(_quality&2){
-          int gv=greysc(readBuff[j]);
+          int gv=greysc(readBuff[j*spr.width()/fw]);
           int32_t fd = floyd_tab[i&1][j]+((gv<<8)|gv);
           while(fd>=0x800) { 
             cg++;
             if(fd>=0) fd -= 0x1000;
           }
           if(fd<0) fd++;
-          if(j!=spr.width()-1) 
-                { floyd_tab[i&1]   [j+1] += (fd*7)>>4; }
-          if(j) { floyd_tab[!(i&1)][j-1] += (fd*3)>>4; }
-                { floyd_tab[!(i&1)][j  ] += (fd*5)>>4; }
-          if(j!=spr.width()-1) 
-                { floyd_tab[!(i&1)][j+1] += (fd  )>>4; }
+          if(j!=fw-1) { floyd_tab[i&1]   [j+1] += (fd*7)>>4; }
+          if(j)       { floyd_tab[!(i&1)][j-1] += (fd*3)>>4; }
+                      { floyd_tab[!(i&1)][j  ] += (fd*5)>>4; }
+          if(j!=fw-1) { floyd_tab[!(i&1)][j+1] += (fd  )>>4; }
         }
-        else{ cg=greysc(readBuff[j])>>4; }
+        else{ cg=greysc(readBuff[j*spr.width()/fw])>>4; }
 #else
-          uint_fast8_t cg=greysc(readBuff[j])>>4;
+          uint_fast8_t cg=greysc(readBuff[j*spr.width()/fw])>>4;
 #endif
           if(negativeOrder)
             buff8bit |= (cg<k)<<((~j)&7);
@@ -288,17 +293,17 @@ void readguyEpdBase::drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16
             if(cg<15) //白色不考虑
               buff8bit |= (cg>=((~k)&15))<<((~j)&7);
           }
-          if((j&7)==7 || j==((int32_t)spr.width()-1)){
+          if((j&7)==7 || j==((int32_t)fw-1)){
             writeBuff[j>>3]=buff8bit^0xff;
             buff8bit=0;
           }
         //}
-        //sprbase.drawPixel(x+j,i,(greysc(readBuff[j])/16)==(15-k));
+        //sprbase.drawPixel(x+j,i,(greysc(readBuff[j*spr.width()/fw])/16)==(15-k));
       }
 #ifdef FLOYD_DITHERING_16GREY
-      if(_quality&2) for(int floi=0;floi<spr.width();floi++) floyd_tab[i&1][floi]=0;
+      if(_quality&2) for(int floi=0;floi<fw;floi++) floyd_tab[i&1][floi]=0;
 #endif
-      sprbase.drawBitmap(x,i,writeBuff,spr.width(),1,1,0);
+      sprbase.drawBitmap(x,i,writeBuff,fw,1,1,0);
     }
     drv_draw16grey_step((const uint8_t*)sprbase.getBuffer(),k); //使用灰度显示函数
   }

@@ -97,8 +97,10 @@ public:
      *  @return uint32_t 颜色的灰度值
      */
     IRAM_ATTR static int greysc(int c){return(((c>>3)&0x1F)*79+(((c<<3)+(c>>13))&0x3F)*76+((c>>8)&0x1F)*30)>>5;}
-    void drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,int o=0); //分步完成灰度刷新
-    void drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y);//省内存方式
+    void drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,int o=0,
+      uint16_t fw=0, uint16_t fh=0); //分步完成灰度刷新
+    void drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,
+      uint16_t fw=0, uint16_t fh=0);//省内存方式
     void drv_draw16grey_step(const uint8_t *buf, int step){ //分步完成灰度刷新
       drv_draw16grey_step([&](int n)->uint8_t{return buf[n];},step);
     }
@@ -113,6 +115,8 @@ public:
 #ifdef MEPD_DEBUG_DISPLAY
     friend class LGFX;
 #endif
+  private:
+    int16_t guy_width=0,guy_height=0;
 };
 
 #endif /* END OF FILE. ReadGuy project.

@@ -50,12 +50,11 @@ protected:
   int epdWidth;
   int epdHeight;
 private:
-  void pre();
   void epd_init();
   void send_zoneInfo();
   void SendLuts(bool part_lut);
-  uint8_t part_mode = 0;
-  uint8_t Power_is_on = 0; //初始为未上电
+  uint8_t part_mode = 1;
+  uint8_t Power_is_on = 2; //初始为未上电
   uint8_t greyLut=15;
   uint8_t greyHQ=4; // greyHQ==3 时 为高品质刷新灰度 否则为常规方式刷新灰度
   const uint8_t *guy_lutArray[6];
