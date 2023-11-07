@@ -148,10 +148,10 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷�
   lastRefresh=millis();
   }
   if(m&2){//stage 2
-    lastRefresh=0;
     uint32_t ms=millis()-lastRefresh;
     uint32_t u=epdFull?1600:310;
     if(ms<u) guy_epdBusy(u-ms);
+    lastRefresh=0;
   }
   //guy_epdBusy(epdFull?1600:310);
 }

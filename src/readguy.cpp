@@ -49,7 +49,7 @@ ReadguyDriver::ReadguyDriver(){
   READGUY_sd_ok = 0; //初始默认SD卡未成功初始化
   READGUY_buttons = 0; //初始情况下没有按钮
 } //WiFiSet: 是否保持AP服务器一直处于打开状态
-uint8_t ReadguyDriver::init(uint8_t WiFiSet,bool initepd/* ,int g_width,int g_height */){
+uint8_t ReadguyDriver::init(uint8_t WiFiSet, bool initepd){
   if(READGUY_cali==127) //已经初始化过了一次了, 为了防止里面一些volatile的东西出现问题....还是退出吧
     return 0;
 #ifdef DYNAMIC_PIN_SETTINGS
@@ -187,7 +187,7 @@ void ReadguyDriver::setEpdDriver(bool initepd/* ,int g_width,int g_height */){
    //创建画布. 根据LovyanGFX的特性, 如果以前有画布会自动重新生成新画布
   //此外, 即使画布宽度不是8的倍数(如2.13寸单色),也支持自动补全8的倍数 ( 250x122 => 250x128 )
   //为了保证图片显示功能的正常使用, 高度也必须是8的倍数.
-  createSprite(guy_dev->drv_width(),(guy_dev->drv_height()+7)&0x7ffffff8);
+  createSprite(guy_dev->drv_width(),guy_dev->drv_height());
   //这里发现如果用自定义的内存分配方式会更好一些. 不会导致返回的height不对. 但是因为LovyanGFX库未更新 暂时不能这么用.
   //setRotation(1); //旋转之后操作更方便
   setRotation(0);
@@ -380,7 +380,7 @@ void ReadguyDriver::display(uint8_t part){
     //in_release(); //恢复
   }
 }
-void ReadguyDriver::display(const uint8_t *buf, uint8_t part){
+void ReadguyDriver::displayBuffer(const uint8_t *buf, uint8_t part){
   if(READGUY_cali==127){
     //in_press(); //暂停, 然后读取按键状态 spibz
     guy_dev->drv_fullpart(part&1);

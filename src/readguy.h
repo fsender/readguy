@@ -154,9 +154,10 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     /** @brief 初始化readguy
      *  @param WiFiSet 是否保持AP模式关闭. 0:配网完成自动关WiFi, 1:需要手动调用 WiFi.mode(WIFI_OFF) 关闭WiFi.
      * 2:自动连接到已存的WiFi, 但不等待连接成功
+     *  @param initepd 是否初始化墨水屏. 初始化后的首次刷屏必为慢刷. 如果是不断电复位, 可以不初始化墨水屏直接刷屏
      *  @return SD卡是否就绪
      */
-    uint8_t init(uint8_t WiFiSet = 0,bool initepd = 1/* ,int g_width = 0,int g_height = 0 */);
+    uint8_t init(uint8_t WiFiSet = 0, bool initepd = 1);
     /// @brief 设置显示亮度
     void setBright(int d);
     /// @brief 返回显示亮度
@@ -164,7 +165,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     /// @brief 刷新显示到屏幕上
     void display(uint8_t part = READGUY_FAST);
     /// @brief 刷新显示到屏幕上
-    void display(const uint8_t *buf, uint8_t part = READGUY_FAST);
+    void displayBuffer(const uint8_t *buf, uint8_t part);
     /** @brief 刷新显示到屏幕上, 可以自定义读取指定位置像素的函数
      *  @param f 自定义的函数. 此函数将在读取像素并输出到墨水屏时被调用.
      *  每次调用需要返回 "参数对应位置" 的8个像素的颜色信息(凑成一字节). 其中左侧应在高位,右侧应在低位.
@@ -179,7 +180,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
      *  @endcode
      *  该函数会将参数从0开始,每次逐渐增加1的顺序来被调用. 即先调用f(0),再f(1),f(2),f(3)... 以此类推.
      */
-    void display(std::function<uint8_t(int)> f, uint8_t part = READGUY_FAST);
+    void display(std::function<uint8_t(int)> f, uint8_t part);
     /// @brief 显示图片, 使用抖动算法. 可以用省内存的方法显示, 可以缩放到指定的宽度和高度
     void drawImage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw=0, uint16_t zoomh=0){
       if(READGUY_cali==127) drawImage(*this,spr,x,y,zoomw,zoomh);
@@ -337,14 +338,18 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     static uint8_t rd_btn_f(uint8_t btn);
     uint8_t getBtn_impl(); //按钮不可用, 返回0.
     static void in_press(){ //SPI开始传输屏幕数据
-#ifndef ESP8266
+#ifdef ESP8266
+      if(!spibz) SPI.beginTransaction(SPISettings(ESP8266_SPI_FREQUENCY, MSBFIRST, SPI_MODE0));
+#else
       if(!spibz) epd_spi->beginTransaction(SPISettings(ESP32_DISP_FREQUENCY, MSBFIRST, SPI_MODE0));
 #endif
       spibz ++; 
     }
     static void in_release(){//SPI结束传输屏幕数据
       spibz --;
-#ifndef ESP8266
+#ifdef ESP8266
+      if(!spibz) SPI.endTransaction();
+#else
       if(!spibz) epd_spi->endTransaction();
 #endif
     }
@@ -377,8 +382,8 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     //constexpr int memHeight  () const { return guy_height ; } //返回显存高度(不是画幅高度),不会随着画布旋转改变
     int drvWidth () const { return READGUY_cali==127?guy_dev->drv_width():0;  } //返回显示屏硬件宽度(不是画幅宽度)
     int drvHeight() const { return READGUY_cali==127?guy_dev->drv_height():0; } //返回显示屏硬件高度(不是画幅高度)
-    int width () const { return (getRotation()&1)?drvHeight():drvWidth(); }
-    int height() const { return (getRotation()&1)?drvWidth():drvHeight(); }
+  //int width () const { return (getRotation()&1)?drvHeight():drvWidth(); }
+  //int height() const { return (getRotation()&1)?drvWidth():drvHeight(); }
 //  private:
     void implBeginTransfer() { guy_dev->BeginTransfer(); } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!
     void implEndTransfer()   { guy_dev->EndTransfer();   } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!

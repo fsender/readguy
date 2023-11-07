@@ -61,16 +61,16 @@ uint8_t readguyImage::drawImgHandler(int r, LGFX_Sprite *spr){
       //_x=y-r/stage*_h; yd=0;
       //_y=x;//(widthDiv8<<3)-x-1;
       _x=x-r/stage*_h;
-      _y=y; yd=0;
+      _y=y+w-guy->drvWidth(); yd=0;
       if(_x<0){ xd=-_x; _x=0; }
       break;
       case 2: 
-      _x=x; xd=0;
-      _y=y-(GUY_STAGES-r/stage-1)*_h;
+      _x=x+w-guy->drvWidth(); xd=0;
+      _y=y+(r/stage+1)*_h-h;
       if(_y<0){ yd=-_y; _y=0; }
       break;
       case 3: 
-      _x=x-(GUY_STAGES-r/stage-1)*_h;
+      _x=x+(r/stage+1)*_h-h;
       _y=y; yd=0;
       if(_x<0){ xd=-_x; _x=0; }
       break;
@@ -234,7 +234,7 @@ void readguyImage::drawImageFile(bool use16grey){
     _pool=exPool;
   }
   if(_pool==nullptr) {
-    _h=(h+7)>>3; //设置缓存区的高度. 更多内存将可以更快显示
+    _h=h>>3; //设置缓存区的高度. 更多内存将可以更快显示
     _pool=(uint8_t *)guy->getBuffer();
   }
   //(guy->guyMemoryHeight()+7)>>3 返回高度,并补齐后右移三位 (等效于除以2³, 分成8份)
@@ -275,7 +275,7 @@ void readguyImage::drawImageFile(bool use16grey){
   }
   else{
     // ************* 提示: 编写此示例时的最新版本LovyanGFX库不提供此函数. 请看ex06_Image.ino文件开头的解决方法!
-    guy->display(std::bind(&readguyImage::drawImgHandler,this,std::placeholders::_1,&bmpspr));
+    guy->display(std::bind(&readguyImage::drawImgHandler,this,std::placeholders::_1,&bmpspr),READGUY_FAST);
     // 此函数过不了编译 需要改库.
   }
 
