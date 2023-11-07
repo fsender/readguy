@@ -152,7 +152,9 @@ void drv_base::drv_setDepth(uint8_t i){
   SendLuts(1); 
   EndTransfer();
 }
-void drv_base::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
+void drv_base::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷新
+  if(m&1){//stage 1
+  if(lastRefresh) drv_dispWriter(f,2);
   BeginTransfer();
   epd_init();
   SendLuts(part_mode);
@@ -169,17 +171,29 @@ void drv_base::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
     send_zoneInfo();
     guy_epdCmd(0x12);
     EndTransfer();
-    guy_epdBusy(-200);
   }
   else{
     guy_epdCmd(0x12);
     EndTransfer();
-    guy_epdBusy(-2000);
-    BeginTransfer();
-    epd_init();
-    SendLuts(1);
-    guy_epdCmd(0x92);
-    EndTransfer();
+  }
+  lastRefresh=millis();
+  }
+  if(m&2){//stage 2
+    uint32_t ms=millis()-lastRefresh;
+    if(part_mode){
+      if(ms<200) guy_epdBusy(ms-200);
+      //guy_epdBusy(-200);
+    }
+    else{
+      if(ms<2000) guy_epdBusy(ms-2000);
+      //guy_epdBusy(-2000);
+      BeginTransfer();
+      epd_init();
+      SendLuts(1);
+      guy_epdCmd(0x92);
+      EndTransfer();
+    }
+    lastRefresh=0;
   }
 }
 void drv_base::drv_sleep() { //开始屏幕睡眠

@@ -180,11 +180,10 @@ void ReadguyDriver::setEpdDriver(bool initepd/* ,int g_width,int g_height */){
   //else guy_width = guy_dev->drv_width(); //宽度必须是8的倍数, 但这个可以由GFX自动计算
   //if(g_height) guy_height = g_height;
   //else guy_height = guy_dev->drv_height();
-  Serial.println(F("[Guy EPD] EPD init OK"));
   //以下依赖于你的图形驱动
   setColorDepth(1); //单色模式
   createPalette();  //初始化颜色系统
-  Serial.printf_P(PSTR("[Guy EPD] mono set: w: %d, h: %d\n"),guy_dev->drv_width(),guy_dev->drv_height());
+  Serial.printf_P(PSTR("[Guy EPD] EPD init OK: w: %d, h: %d\n"),guy_dev->drv_width(),guy_dev->drv_height());
    //创建画布. 根据LovyanGFX的特性, 如果以前有画布会自动重新生成新画布
   //此外, 即使画布宽度不是8的倍数(如2.13寸单色),也支持自动补全8的倍数 ( 250x122 => 250x128 )
   //为了保证图片显示功能的正常使用, 高度也必须是8的倍数.
@@ -370,32 +369,41 @@ void ReadguyDriver::setBright(int d){
     digitalWrite(READGUY_bl_pin,d?HIGH:LOW);
   }
 }
-void ReadguyDriver::display(bool part){
+void ReadguyDriver::display(uint8_t part){
   //真的是我c++的盲区了啊....搜索了半天才找到可以这么玩的
   //......可惜'dynamic_cast' not permitted with -fno-rtti
   // static bool _part = 0; 记忆上次到底是full还是part, 注意启动时默认为full
   if(READGUY_cali==127){
     //in_press(); //暂停, 然后读取按键状态 spibz
-    guy_dev->drv_fullpart(part);
-    guy_dev->_display((const uint8_t*)getBuffer());
+    guy_dev->drv_fullpart(part&1);
+    guy_dev->_display((const uint8_t*)getBuffer(),((part>>1)?part>>1:3));
     //in_release(); //恢复
   }
 }
-void ReadguyDriver::display(std::function<uint8_t(int)> f, bool part){
+void ReadguyDriver::display(const uint8_t *buf, uint8_t part){
   if(READGUY_cali==127){
     //in_press(); //暂停, 然后读取按键状态 spibz
-    guy_dev->drv_fullpart(part);
-    guy_dev->drv_dispWriter(f);
+    guy_dev->drv_fullpart(part&1);
+    guy_dev->_display(buf,((part>>1)?part>>1:3));
+    //in_release(); //恢复
+  }
+}
+void ReadguyDriver::display(std::function<uint8_t(int)> f, uint8_t part){
+  if(READGUY_cali==127){
+    //in_press(); //暂停, 然后读取按键状态 spibz
+    guy_dev->drv_fullpart(part&1);
+    guy_dev->drv_dispWriter(f,((part>>1)?part>>1:3));
     //in_release(); //恢复
   }
 }
 void ReadguyDriver::drawImage(LGFX_Sprite &base, LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw, uint16_t zoomh) { 
   if(READGUY_cali==127) guy_dev->drv_drawImage(base, spr, x, y, 0, zoomw, zoomh); 
 }
-void ReadguyDriver::drawImageStage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint8_t stage,
+void ReadguyDriver::drawImageStage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,uint8_t stage,
   uint8_t totalstage,uint16_t zoomw,uint16_t zoomh) {
   if(READGUY_cali!=127 || stage>=totalstage) return;
-  guy_dev->drv_drawImage(*this, spr, x, y, (totalstage<=1)?0:(stage==0?1:(stage==(totalstage-1)?3:2)),zoomw,zoomh);
+  //Serial.printf("stage: %d/%d\n",stage+1,totalstage);
+  guy_dev->drv_drawImage(sprbase, spr, x, y, (totalstage<=1)?0:(stage==0?1:(stage==(totalstage-1)?3:2)),zoomw,zoomh);
 }
 void ReadguyDriver::setDepth(uint8_t d){ 
   if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling()) guy_dev->drv_setDepth(d); 

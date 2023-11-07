@@ -15,6 +15,29 @@
  * - 运行的会很缓慢, 因为示例的图片文件比较大.
  * 1. 在运行过ex01或者ex02的开发板上 编译烧录本程序.
  * 2. 将该项目data文件夹内的所有文件放置于SD卡的根目录上.
+ * 就是SD卡内放data文件夹内的所有文件, 不能额外套文件夹.
+ * 如果你的SD卡插入电脑上显示为可移动磁盘, 那么双击SD卡目录就要看到这个文件夹里的文件
+ * 
+ * 将根目录下的data文件夹 上传到LittleFS之后运行效果更佳
+ * 或者可以准备一张SD卡,并准备在卡的根目录下放置data文件夹内的文件.
+ * 就是SD卡内放data文件夹内的所有文件, 不能额外套文件夹.
+ * 如果你的SD卡插入电脑上显示为可移动磁盘, 那么双击SD卡目录就要看到这个文件夹里的文件
+ * 
+ * 默认的文件系统为SD卡. 当没有插入SD卡时, 会读取LittleFS文件系统.
+ * 没有条件准备SD卡的, 可以烧录LittleFS文件系统.
+ * 
+ * 对于ESP8266 Arduino 用户, 在项目草图文件夹内新建一个data文件夹, 并放入文件 (示例已提供data文件夹)
+ * 再在 arduinoIDE 的工具选项里选择 ESP8266 LittleFS Data Upload.
+ * 没有这个选项的需要参考以下文档安装ESP8266 Sketch upload tool
+ * https://randomnerdtutorials.com/install-esp8266-nodemcu-littlefs-arduino/
+ * 
+ * 对于ESP32 Arduino 用户, 也要在项目草图文件夹内放一个data文件夹, 并把文件放入其中 (示例已提供data文件夹)
+ * 再在 arduinoIDE 的工具选项里选择 ESP32 Sketch data upload, 最后选择LittleFS.
+ * 没有这个选项的需要参考以下文档安装ESP32 LittleFS upload tool
+ * https://randomnerdtutorials.com/esp32-littlefs-arduino-ide/
+ * 
+ * 对于PlatformIO 用户, 需要进入platformIO扩展界面, 选择Upload Filesystem Image, 上传项目文件.
+ * ESP8266和ESP32都要用这种方法.
  * 
  * {0} 代码食用注意事项:
  * 这一部分的代码很难读, 或者按维莫斯小姐的说法, 很 "抽象" .
@@ -174,13 +197,13 @@ void setup(){
   delay(2000);
 
 
-  guy.display(FILL_WHITE,true); //在保持屏幕缓存不变的时候快速刷新白屏.
+  guy.display(FILL_WHITE,READGUY_FAST); //在保持屏幕缓存不变的时候快速刷新白屏.
   guy.drawImage(sp,0,0,guy.width(),guy.height()); //绘画的画布可以被放大或者缩小到任意宽度和高度.
   //此处的参数调用表示将会在屏幕坐标(0,0)开始显示, 显示的画布宽度缩放到屏幕宽度, 画布高度缩放到屏幕高度.
   guy.display(); //调用display函数刷屏.
   delay(2000);
 
-  guy.display(FILL_WHITE,true); //在保持屏幕缓存不变的时候快速刷新白屏
+  guy.display(FILL_WHITE,READGUY_FAST); //在保持屏幕缓存不变的时候快速刷新白屏
   guy.fillScreen(1); //白屏清屏(清屏幕缓存)
   guy.drawImage(sp,10,10,65,50); //缩放: 缩小到65X50
   guy.display(); //调用display函数刷屏.
@@ -244,7 +267,7 @@ void setup(){
 
   im.filename=BMP_FILE;          //在此直接设置文件路径和文件名.
 
-  guy.display(FILL_WHITE,false); //将屏幕全刷成白屏. 为了即将的图片刷新.
+  guy.display(FILL_WHITE,READGUY_SLOW); //将屏幕全刷成白屏. 为了即将的图片刷新.
   //建议在使用drawImageFile函数之前, 使用慢刷刷白屏, 可以保证显示效果清晰可见.
 
   im.drawImageFile();            //显示BMP格式.图片. im会自动识别文件扩展名并绘制.
@@ -265,7 +288,7 @@ void setup(){
 
   im.background=0;               //设置背景颜色, 0黑1白, 此处设为背景色为黑色.
 
-  guy.display(FILL_WHITE,false); //将屏幕全刷成白屏. 为了即将的图片刷新.
+  guy.display(FILL_WHITE,READGUY_SLOW); //将屏幕全刷成白屏. 为了即将的图片刷新.
 
   im.drawImageFile();            //显示JPG格式.图片. im会自动识别文件扩展名并绘制.
   delay(2000);
@@ -279,7 +302,7 @@ void setup(){
   im.scalex=400.0f/1280.0f;
   im.scaley=300.0f/576.0f;
 
-  guy.display(FILL_WHITE, false);//显示. 此处的功能就是将显示缓存输出到屏幕上
+  guy.display(FILL_WHITE, READGUY_SLOW);//显示. 此处的功能就是将显示缓存输出到屏幕上
 
   im.drawImageFile();            //显示PNG格式.图片. ESP8266可能不会绘制.
   delay(2000);
@@ -308,7 +331,7 @@ void setup(){
   im.exPoolSize=MEM_POOL;                 //设置外部缓存内存大小
   
   guy.setGreyQuality(1);                  //设置灰度模式为默认灰度显示模式
-  guy.display(FILL_WHITE,false);          //将屏幕全刷成白屏. 为了即将显示灰度图.
+  guy.display(FILL_WHITE,READGUY_SLOW);   //将屏幕全刷成白屏. 为了即将显示灰度图.
 
   im.enableFloyd=0;                       //禁用掉抖动算法.
 
@@ -316,7 +339,7 @@ void setup(){
 
   delay(2000);
 
-  guy.display(FILL_WHITE,false);          //将屏幕全刷成白屏. 为了即将显示灰度图.
+  guy.display(FILL_WHITE,READGUY_SLOW);   //将屏幕全刷成白屏. 为了即将显示灰度图.
 
   im.enableFloyd=1;                       // 重新启用抖动算法.
 
@@ -351,7 +374,7 @@ void setup(){
   }
   guy.drawLine(guy.width(),0,0,guy.height(),0);
 
-  guy.display(false);               //刷新屏幕, 显示绘画的线段
+  guy.display(READGUY_SLOW);        //刷新屏幕, 显示绘画的线段
 
   //im.baseFs=&guy.guyFS();         //直接更改im内的数据即可设置绘制参数. 在此处就是设置文件系统.
   im.filename=BMP_FILE;             //在此直接设置文件路径和文件名.

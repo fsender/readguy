@@ -110,7 +110,9 @@ void drvBase::drv_fullpart(bool part){ //切换慢刷/快刷功能
   if(!part) iLut=15; //恢复默认的灰度模式
   Init(part?lut_fast:lut_slow);
 }*/
-void drvBase::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新等功能
+void drvBase::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷新等功能
+  if(m&1){//stage 1
+  if(lastRefresh) drv_dispWriter(f,2);
   if(sleeping) Init(lut_slow);
   BeginTransfer();
   SetMemory();   // bit set = white, bit reset = black
@@ -123,14 +125,22 @@ void drvBase::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新等�
   guy_epdCmd(0x20);
   guy_epdCmd(0xff);
   EndTransfer();
-  guy_epdBusy((this->lut == (const uint8_t*)lut_fast)?idleFastRf:idleSlowRf);
-  BeginTransfer();
-  SetMemory();   // bit set = white, bit reset = black
-  guy_epdBusy(90);
-  guy_epdCmd(0x26);  /* will send the color data */
-  for (int i = 0; i < epdHeight*epdWidth / 8; i++) 
-    SpiTransfer(f(i));
-  EndTransfer();
+  lastRefresh=millis();
+  }
+
+  if(m&2){//stage 2
+    uint32_t ms=millis()-lastRefresh;
+    uint32_t u=(this->lut == (const uint8_t*)lut_fast)?idleFastRf:idleSlowRf;
+    if(ms<u) guy_epdBusy(u-ms);
+    lastRefresh=0;
+    BeginTransfer();
+    SetMemory();   // bit set = white, bit reset = black
+    guy_epdBusy(90);
+    guy_epdCmd(0x26);  /* will send the color data */
+    for (int i = 0; i < epdHeight*epdWidth / 8; i++) 
+      SpiTransfer(f(i));
+    EndTransfer();
+  }
 }
 void drvBase::drv_sleep() { //开始屏幕睡眠
   if(RST_PIN>=0) { //未定义RST_PIN时无法唤醒

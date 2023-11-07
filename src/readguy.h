@@ -132,6 +132,13 @@
 #define READGUY_buttons  (config_data[21]) //按钮个数, 0-3都有可能
 #endif
 
+#define READGUY_SLOW       0
+#define READGUY_FAST       1
+#define READGUY_SLOW_START 2
+#define READGUY_FAST_START 3
+#define READGUY_SLOW_END   4
+#define READGUY_FAST_END   5
+
 class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
   public:
 #ifdef READGUY_ESP_ENABLE_WIFI
@@ -155,7 +162,9 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     /// @brief 返回显示亮度
     int getBright() const { return currentBright; }
     /// @brief 刷新显示到屏幕上
-    void display(bool part = true);
+    void display(uint8_t part = READGUY_FAST);
+    /// @brief 刷新显示到屏幕上
+    void display(const uint8_t *buf, uint8_t part = READGUY_FAST);
     /** @brief 刷新显示到屏幕上, 可以自定义读取指定位置像素的函数
      *  @param f 自定义的函数. 此函数将在读取像素并输出到墨水屏时被调用.
      *  每次调用需要返回 "参数对应位置" 的8个像素的颜色信息(凑成一字节). 其中左侧应在高位,右侧应在低位.
@@ -170,7 +179,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
      *  @endcode
      *  该函数会将参数从0开始,每次逐渐增加1的顺序来被调用. 即先调用f(0),再f(1),f(2),f(3)... 以此类推.
      */
-    void display(std::function<uint8_t(int)> f, bool part = true);
+    void display(std::function<uint8_t(int)> f, uint8_t part = READGUY_FAST);
     /// @brief 显示图片, 使用抖动算法. 可以用省内存的方法显示, 可以缩放到指定的宽度和高度
     void drawImage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw=0, uint16_t zoomh=0){
       if(READGUY_cali==127) drawImage(*this,spr,x,y,zoomw,zoomh);
@@ -368,14 +377,16 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     //constexpr int memHeight  () const { return guy_height ; } //返回显存高度(不是画幅高度),不会随着画布旋转改变
     int drvWidth () const { return READGUY_cali==127?guy_dev->drv_width():0;  } //返回显示屏硬件宽度(不是画幅宽度)
     int drvHeight() const { return READGUY_cali==127?guy_dev->drv_height():0; } //返回显示屏硬件高度(不是画幅高度)
-    int width () const { return READGUY_cali==127?((getRotation()&1)?drvHeight():drvWidth()):0; }
-    int height() const { return READGUY_cali==127?((getRotation()&1)?drvWidth():drvHeight()):0; }
+    int width () const { return (getRotation()&1)?drvHeight():drvWidth(); }
+    int height() const { return (getRotation()&1)?drvWidth():drvHeight(); }
 //  private:
     void implBeginTransfer() { guy_dev->BeginTransfer(); } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!
     void implEndTransfer()   { guy_dev->EndTransfer();   } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!
     /// @brief 分阶段显示图片, 使用抖动算法. 更加的省内存.目前函数
     void drawImageStage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint8_t stage,uint8_t totalstage,
-      uint16_t zoomw=0,uint16_t zoomh=0);
+      uint16_t zoomw=0,uint16_t zoomh=0){ drawImageStage(*this,spr,x,y,stage,totalstage,zoomw,zoomh); }
+    void drawImageStage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,
+      uint8_t stage,uint8_t totalstage,uint16_t zoomw=0,uint16_t zoomh=0);
 };
 #endif /* END OF FILE. ReadGuy project.
 Copyright (C) 2023 FriendshipEnder. */

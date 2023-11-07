@@ -185,7 +185,9 @@ void drv::drv_fullpart(bool part){ //初始化慢刷功能
   if(epdFull<=1) epdFull = !part; //epdFull==2代表睡眠中, 不能快刷
   if(epdFull) GreyScaling=0;
 }
-void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
+void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷新
+  if(m&1){//stage 1
+  if(lastRefresh) drv_dispWriter(f,2);
   BeginTransfer();
   epd_Init();
   SetMemory();
@@ -211,9 +213,7 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
     SetLut(lut_213_B72_Full);
     guy_epdCmd(0x22);
     guy_epdParam(0xc4);
-    guy_epdCmd(0x20);
-    EndTransfer();
-    guy_epdBusy(1600); //等待刷完
+    //guy_epdBusy(1600); //等待刷完
   }
   else{ //快刷
     guy_epdCmd(0x2c); //may a mistake? 此处不需要设置vcom
@@ -221,17 +221,24 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
     SetLut(GreyScalingHighQuality?lut_213_B72_16grey:lut_213_B72);
     guy_epdCmd(0x22);
     guy_epdParam(0x04);
-    guy_epdCmd(0x20);
-    EndTransfer();
-    guy_epdBusy(260); //等待屏幕刷新完成
   }
-  BeginTransfer(); //write again
-  SetMemory();
-  guy_epdCmd(0x26);
-  for (int i = 0; i < GUY_D_HEIGHT*GUY_D_WIDTH/8; i++)
-    SpiTransfer(f(i)); //按照给定的RAM写入数据
+  guy_epdCmd(0x20);
   EndTransfer();
-  if(epdFull) power_down();
+  lastRefresh=millis();
+  }
+  if(m&2){//stage 2
+    uint32_t ms=millis()-lastRefresh;
+    uint32_t u=epdFull?1600:260;
+    if(ms<u) guy_epdBusy(u-ms); //等待屏幕刷新完成
+    lastRefresh=0;
+    BeginTransfer(); //write again
+    SetMemory();
+    guy_epdCmd(0x26);
+    for (int i = 0; i < GUY_D_HEIGHT*GUY_D_WIDTH/8; i++)
+      SpiTransfer(f(i)); //按照给定的RAM写入数据
+    EndTransfer();
+    if(epdFull) power_down();
+  }
 }
 void drv::drv_draw16grey_step(std::function<uint8_t(int)> f, int step){
   if(_quality&1) return readguyEpdBase::drv_draw16grey_step(f,step);

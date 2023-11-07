@@ -73,7 +73,7 @@
 //#define _DEFINA_SD_CS_PIN 0
 
 // * for NodeMcu ctg stack LCF board
-#define WHITE_GAP 8
+#define WHITE_GAP 2
 
 #ifdef ESP8266
 #define DISPLAY_TYPE_ST7789_240320 //2.0寸的ST7789 IPS TFT模块

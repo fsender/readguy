@@ -11,6 +11,25 @@
  * @brief ReadGuy功能演示.
  * 将根目录下的data文件夹 上传到LittleFS之后运行效果更佳
  * 或者可以准备一张SD卡,并准备在卡的根目录下放置data文件夹内的文件.
+ * 就是SD卡内放data文件夹内的所有文件, 不能额外套文件夹.
+ * 如果你的SD卡插入电脑上显示为可移动磁盘, 那么双击SD卡目录就要看到这个文件夹里的文件
+ * 
+ * 默认的文件系统为SD卡. 当没有插入SD卡时, 会读取LittleFS文件系统.
+ * 没有条件准备SD卡的, 可以烧录LittleFS文件系统.
+ * 
+ * 对于ESP8266 Arduino 用户, 在项目草图文件夹内新建一个data文件夹, 并放入文件 (示例已提供data文件夹)
+ * 再在 arduinoIDE 的工具选项里选择 ESP8266 LittleFS Data Upload.
+ * 没有这个选项的需要参考以下文档安装ESP8266 Sketch upload tool
+ * https://randomnerdtutorials.com/install-esp8266-nodemcu-littlefs-arduino/
+ * 
+ * 对于ESP32 Arduino 用户, 也要在项目草图文件夹内放一个data文件夹, 并把文件放入其中 (示例已提供data文件夹)
+ * 再在 arduinoIDE 的工具选项里选择 ESP32 Sketch data upload, 最后选择LittleFS.
+ * 没有这个选项的需要参考以下文档安装ESP32 LittleFS upload tool
+ * https://randomnerdtutorials.com/esp32-littlefs-arduino-ide/
+ * 
+ * 对于PlatformIO 用户, 需要进入platformIO扩展界面, 选择Upload Filesystem Image, 上传项目文件.
+ * ESP8266和ESP32都要用这种方法.
+ * 
  * 用于演示BMP格式图片灰度显示.
  * 
  * @note 食用方法:
@@ -76,14 +95,14 @@ void setup(){
   guy.drawString("Hello Readguy!",10,10); //用此函数将字符串显示到屏幕缓存内
   //guy.print("Hello Readguy!"); //使用这个函数也能显示出字符串, 但是需要提前使用setCursor确定显示坐标
 
-  guy.display(true);   // 快速刷新. 将屏幕缓存内的内容显示到墨水屏幕上
-  //guy.display(false); // 慢速刷新. 
+  guy.display(READGUY_FAST);   // 快速刷新. 将屏幕缓存内的内容显示到墨水屏幕上
+  //guy.display(READGUY_SLOW); // 慢速刷新. 
 
   guy.setCursor(10,30); //设置显示的坐标
 
   guy.print("Hello~"); //或者用print函数在屏幕上打印字符串, 数值, 字符等等... 两种函数都行
 
-  guy.display(false); // 慢速刷新. 慢刷的对比度显著高于快速刷新, 而且可以消除残影
+  guy.display(READGUY_SLOW); // 慢速刷新. 慢刷的对比度显著高于快速刷新, 而且可以消除残影
 
 
   guy.drawString(guy.SDinside()?"SD card OK.":"No SD card!",10,50); //检查readguy是否插入了SD卡
@@ -134,7 +153,7 @@ void setup(){
 
   guy.fillScreen(1);
 
-  guy.display(false); // 慢速刷新. 慢刷的对比度显著高于快速刷新, 而且可以消除残影
+  guy.display(READGUY_SLOW); // 慢速刷新. 慢刷的对比度显著高于快速刷新, 而且可以消除残影
 
   for(int i=1;i<16;i++){ //灰度测试, 循环设置不同灰度
 
@@ -203,7 +222,7 @@ void setup(){
   guy.setFont(&FreeMonoBold9pt7b); //设置文本字体
   guy.setTextColor(0); //设置文本颜色
   guy.fillScreen(1); //用白色清屏.
-  guy.display(false); //慢刷. 注意, 进行慢刷操作之后, 所有之前显示的灰度内容均会被重新刷成纯黑色
+  guy.display(READGUY_SLOW); //慢刷. 注意, 进行慢刷操作之后, 所有之前显示的灰度内容均会被重新刷成纯黑色
   //不管是浅灰色还是深灰色, 进行慢刷之后只有黑白色. 原来的非白色像素(浅灰色,深灰色和黑色等) 会全刷成白色.
   
   guy.drawString("Rotation 0",10,12); //默认旋转方向为0. 实际的默认方向取决于屏幕IC. 大多数屏幕IC是竖屏.
@@ -239,13 +258,13 @@ void setup(){
   guy.setTextColor(1);  //设置文本颜色为白色,因为被反色的屏幕的当前像素颜色以黑色像素为主
   guy.drawString("Wake Up! ~\\(^_^)/~",10,50); //退出睡眠状态
 
-  guy.display(false);  //使用慢刷 来唤醒处于低功耗状态下的屏幕.
+  guy.display(READGUY_SLOW);  //使用慢刷 来唤醒处于低功耗状态下的屏幕.
 
 //                                   ------------------ 6 - 可以利用灰度来达到的一些显示效果 --<<<<<<
   
   guy.fillScreen(1);  //清屏
   
-  guy.display(FILL_WHITE,false); //慢刷清屏. 左侧的FILL_WHITE表示 不写入屏幕缓存, 直接刷全白
+  guy.display(FILL_WHITE,READGUY_SLOW); //慢刷清屏. 左侧的FILL_WHITE表示 不写入屏幕缓存, 直接刷全白
   //可以改为FILL_BLACK来设置写入缓存全黑.
   //以上的方式均不会修改屏幕缓存中的内容. 右侧的false表示全屏慢刷.
 

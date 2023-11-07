@@ -55,9 +55,8 @@ protected:
   #endif
     uint16_t *readBuff;// = new uint16_t[spr.width()];
     uint8_t *writeBuff;// = new uint8_t[w];
-  #if (defined(FLOYD_DITHERING_16GREY) || defined(FLOYD_STEINBERG_DITHERING))
     int16_t *floyd_tab[2];
-  #endif
+    uint32_t lastRefresh;
 
 public:
     readguyEpdBase(void);
@@ -82,9 +81,9 @@ public:
     virtual int drv_ID() const =0;   //返回驱动代号
     virtual void drv_init()=0; //初始化屏幕
     virtual void drv_fullpart(bool part)=0; //初始化慢刷功能
-    void _display(const uint8_t *d){ drv_dispWriter([&](int n)->uint8_t{return d[n];}); }
-    virtual void drv_dispWriter(std::function<uint8_t(int)>)=0; //按照显示函数刷新
-    void drv_color(uint8_t c){ drv_dispWriter([=](int)->uint8_t{return c;}); } //单色刷新
+    void _display(const uint8_t *d,uint8_t m=3){ drv_dispWriter([&](int n)->uint8_t{return d[n];},m); }
+    virtual void drv_dispWriter(std::function<uint8_t(int)>,uint8_t m=3)=0; //按照显示函数刷新
+    void drv_color(uint8_t c,uint8_t m=3){ drv_dispWriter([=](int)->uint8_t{return c;},m); } //单色刷新
     virtual void drv_sleep() =0; //开始屏幕睡眠
     virtual int  drv_width() const=0; //返回显示区域宽度, 即使旋转了也不能影响此函数输出
     virtual int  drv_height()const=0; //返回显示区域高度, 即使旋转了也不能影响此函数输出

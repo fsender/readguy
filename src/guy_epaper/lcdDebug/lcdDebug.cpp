@@ -40,7 +40,9 @@ void drv::drv_init(){
 void drv::drv_fullpart(bool part){
   partMode=part;
 }
-void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
+void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷新
+  if(m&1){//stage 1
+  if(lastRefresh) drv_dispWriter(f,2);
   uint16_t dat[8];
   unsigned short xbits=(drv_width()+7)/8;
   if(partMode==0){
@@ -79,7 +81,13 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
         }
       }
     }
-    yield();
+  }
+  lastRefresh=millis();
+  }
+  if(m&2){//stage 2
+    uint32_t ms=millis()-lastRefresh;
+    if(ms<150) DelayMs(150-ms);
+    lastRefresh=0;
   }
 }
 void drv::drv_sleep() {}

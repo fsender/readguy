@@ -120,7 +120,9 @@ void drv::drv_fullpart(bool part){ //切换慢刷/快刷功能
   }
   part_mode=part;
 }
-void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
+void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷新
+  if(m&1){//stage 1
+  if(lastRefresh) drv_dispWriter(f,2);
   if(sleeping) Init();
   BeginTransfer();
   guy_epdCmd(0x4E);  guy_epdParam(0x00);  guy_epdParam(0x00);
@@ -138,7 +140,15 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   Load_LUT(!part_mode);
   guy_epdCmd(0x20);
   EndTransfer();
-  guy_epdBusy(part_mode?500:1300);  
+  lastRefresh=millis();
+  }
+  if(m&2){//stage 2
+    uint32_t ms=millis()-lastRefresh;
+    uint32_t u=part_mode?500:1300;
+    if(ms<u) guy_epdBusy(u-ms);
+    lastRefresh=0;
+  }
+  //guy_epdBusy(part_mode?500:1300);  
 }
 void drv::drv_sleep() { //开始屏幕睡眠
   if(RST_PIN>=0){

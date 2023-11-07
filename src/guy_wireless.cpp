@@ -191,7 +191,7 @@ bool ReadguyDriver::server_loop(){ //此时等待网页操作完成响应...
     }
     if(refFlag!=127) {
       Serial.printf("randch: %d %c\n",randomch[refFlag],(char)(randomch[refFlag]));
-      drawChar((width()>>1)-46+refFlag*24,(height()>>1)-14,randomch[refFlag],true,false,4);
+      drawChar((guy_dev->drv_width()>>1)-46+refFlag*24,(guy_dev->drv_height()>>1)-14,randomch[refFlag],true,false,4);
       guy_dev->drv_fullpart(1);
       guy_dev->_display((const uint8_t*)getBuffer());
     }
@@ -311,13 +311,14 @@ void ReadguyDriver::handleInitPost(){
   setEpdDriver(); //尝试初始化屏幕
   Serial.println(F("[Guy] Init details..."));
   setTextSize(1);
-  drawCenterString(setSDcardDriver()?"SD Init OK!":"SD Init failed!",width()>>1,(height()>>1)+20);
+  drawCenterString(setSDcardDriver()?"SD Init OK!":"SD Init failed!",
+    guy_dev->drv_width()>>1,(guy_dev->drv_height()>>1)+20);
   setButtonDriver(); //初始化按钮..
   //} //尝试初始化按键, 调用后, 若SD卡初始化成功, READGUY_sd_ok的值会变成1
-  drawRect((width()>>1)-46   ,(height()>>1)-14,20,28,0);
-  drawRect((width()>>1)-46+24,(height()>>1)-14,20,28,0);
-  drawRect((width()>>1)-46+48,(height()>>1)-14,20,28,0);
-  drawRect((width()>>1)-46+72,(height()>>1)-14,20,28,0);
+  drawRect((guy_dev->drv_width()>>1)-46   ,(guy_dev->drv_height()>>1)-14,20,28,0);
+  drawRect((guy_dev->drv_width()>>1)-46+24,(guy_dev->drv_height()>>1)-14,20,28,0);
+  drawRect((guy_dev->drv_width()>>1)-46+48,(guy_dev->drv_height()>>1)-14,20,28,0);
+  drawRect((guy_dev->drv_width()>>1)-46+72,(guy_dev->drv_height()>>1)-14,20,28,0);
   spibz++;
   guy_dev->drv_fullpart(1);
   guy_dev->_display((const uint8_t*)getBuffer());

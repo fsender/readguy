@@ -147,7 +147,9 @@ const PROGMEM unsigned char drv::lutFast_b_w[] ={ 0x5a,2,0,63,0,1 };
 const PROGMEM unsigned char drv::lutFast_w_b[] ={ 0x84,2,0,48,0,1 };
 const PROGMEM unsigned char drv::lutFast_b_b[] ={ 0x01,2,0,48,0,1 };
 //void drv::epd_display(){
-void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
+void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷新
+  if(m&1){//stage 1
+  if(lastRefresh) drv_dispWriter(f,2);
   BeginTransfer();
   Init(part_mode);
   if(part_mode){
@@ -181,7 +183,13 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   }
   guy_epdCmd(0x12);
   EndTransfer();
-  guy_epdBusy(part_mode?-800:-3600);
+  lastRefresh=millis();
+  }
+  if(m&2){//stage 2
+    uint32_t ms=millis()-lastRefresh;
+    uint32_t u=part_mode?800:3600;
+    if(ms<u) guy_epdBusy(ms-u);
+    lastRefresh=0;
   BeginTransfer();
   if(part_mode){
     sendArea();
@@ -189,7 +197,6 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
     for(int i=0;i<GUY_D_WIDTH*GUY_D_HEIGHT/8;i++)
       SpiTransfer(f(i));
     guy_epdCmd(0x92);
-    EndTransfer();
   }
   else{
     Init(2);
@@ -199,6 +206,7 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
       SpiTransfer(f(i));
     guy_epdCmd(0x92);
     guy_epdCmd(0x02);
+  }
     EndTransfer();
     guy_epdBusy(-20);
   }

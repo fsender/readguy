@@ -148,7 +148,9 @@ void drvSSD168x::drv_fullpart(bool part){ //切换慢刷/快刷功能
   if(!part) { iLut=15; greyScaling=0; }
   _part=part;
 }
-void drvSSD168x::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
+void drvSSD168x::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷新
+  if(m&1){//stage 1
+  if(lastRefresh) drv_dispWriter(f,2);
   BeginTransfer();
   if(_part){
     //Reset();
@@ -196,7 +198,15 @@ void drvSSD168x::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   guy_epdParam(_part?0x0f:0xc7);
   guy_epdCmd(0x20);
   EndTransfer();
-  guy_epdBusy(_part?600:2300);
+  lastRefresh=millis();
+  }
+  if(m&2){//stage 2
+    uint32_t ms=millis()-lastRefresh;
+    uint32_t u=_part?600:2300;
+    if(ms<u) guy_epdBusy(u-ms);
+    lastRefresh=0;
+  }
+  //guy_epdBusy(_part?600:2300);
 }
 void drvSSD168x::drv_sleep() { //开始屏幕睡眠
   if(RST_PIN>=0){ //无法唤醒

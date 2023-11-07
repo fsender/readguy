@@ -40,7 +40,7 @@ public:
   virtual int drv_ID() const =0;
   void drv_init(); //初始化屏幕
   void drv_fullpart(bool part); //切换慢刷/快刷功能
-  void drv_dispWriter(std::function<uint8_t(int)> f); //按照函数刷新
+  void drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m=3); //按照函数刷新
   void drv_sleep() ; //开始屏幕睡眠
   int drv_width() const { return epdWidth;  }; //返回显示区域宽度
   int drv_height() const{ return epdHeight; }; //返回显示区域高度

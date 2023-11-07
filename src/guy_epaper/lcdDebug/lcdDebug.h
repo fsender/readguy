@@ -41,7 +41,7 @@ public:
     int drv_ID() const { return MEPD_DEBUG_DISPLAY; }
     void drv_init(); //初始化屏幕
     void drv_fullpart(bool part); //切换慢刷/快刷功能
-    void drv_dispWriter(std::function<uint8_t(int)> f); //单色刷新
+    void drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m=3); //单色刷新
     void drv_sleep() ; //开始屏幕睡眠
     int drv_width() const { return ips.width()-2*WHITE_GAP; } //返回显示区域宽度
     int drv_height() const{ return ips.height()-2*WHITE_GAP; } //返回显示区域高度

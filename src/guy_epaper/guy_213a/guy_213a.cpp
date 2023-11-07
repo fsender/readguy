@@ -119,7 +119,9 @@ void drv::drv_fullpart(bool part){ //初始化慢刷功能
   epdFull = !part;
   //epd_Init();
 }
-void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
+void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷新
+  if(m&1){//stage 1
+  if(lastRefresh) drv_dispWriter(f,2);
   BeginTransfer();
   if(epdFull) { //当刷新模式从快刷切换为慢刷时, 需要发送一次init
     epdFull=0;
@@ -143,7 +145,15 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f){ //单色刷新
   guy_epdParam(epdFull?0xc4:0x04);
   guy_epdCmd(0x20);
   EndTransfer();
-  guy_epdBusy(epdFull?1600:310);
+  lastRefresh=millis();
+  }
+  if(m&2){//stage 2
+    lastRefresh=0;
+    uint32_t ms=millis()-lastRefresh;
+    uint32_t u=epdFull?1600:310;
+    if(ms<u) guy_epdBusy(u-ms);
+  }
+  //guy_epdBusy(epdFull?1600:310);
 }
 void drv::drv_sleep() { //开始屏幕睡眠
   if(RST_PIN>=0){ //RST_PIN<0 无法唤醒
