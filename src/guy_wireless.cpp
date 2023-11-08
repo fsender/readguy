@@ -645,7 +645,7 @@ const PROGMEM char ReadguyDriver::verify2_html[] =
 "al\" method=\"POST\"><input type=\'text\' name=\'t_verify\' maxlength=\"6";
 const PROGMEM char ReadguyDriver::verifybtn_html[3][200] = {
 "一个按键, 操作可能比较繁琐, 但功能还都可以的.<br/>"
-"点按: 下一个/向下翻页<br/>双击: 上一个/向上翻页<br/>三连击: 返回/切换输入法<br/>长按: 确定/选择",
+"点按: 下一个/向下翻页<br/>双击: 确定/选择<br/>三连击: 返回/切换输入法<br/>长按: 上一个/向上翻页",
 "两个按键, 操作可以满足需求.<br/>"
 "按键1点按: 下一个/向下翻页<br/>按键1长按: 上一个/向上翻页<br/>按键2点按: 确定/选择<br/>按键2长按: 返回/切换输入法",
 "三个按键, 操作非常流畅.<br/>"

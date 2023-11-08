@@ -279,18 +279,21 @@ void ReadguyDriver::setButtonDriver(){
   if(READGUY_btn1) btn_rd[0].begin(abs(READGUY_btn1)-1,rd_btn_f,(READGUY_btn1>0));
   if(READGUY_btn2) btn_rd[1].begin(abs(READGUY_btn2)-1,rd_btn_f,(READGUY_btn2>0));
   if(READGUY_btn3) btn_rd[2].begin(abs(READGUY_btn3)-1,rd_btn_f,(READGUY_btn3>0));
+  //if(READGUY_buttons==1){
+    btn_rd[0].setLongRepeatMode(1); //允许连按
+  //}
   if(READGUY_buttons==2){
     btn_rd[0].setMultiBtn(1); //设置为多个按钮,不识别双击或三击
-    btn_rd[0].setLongRepeatMode(1);
+    //btn_rd[0].setLongRepeatMode(1);
     btn_rd[1].setMultiBtn(1); //设置为多个按钮,不识别双击或三击
     btn_rd[1].setLongRepeatMode(0);
   }
   else if(READGUY_buttons==3){
-    btn_rd[0].setLongPressMs(1); //不识别双击三击, 只有按一下或者长按, 并且开启连按
-    btn_rd[0].setLongRepeatMode(1);
+    btn_rd[0].long_press_ms = 150; //不识别双击三击, 只有按一下或者长按, 并且开启连按
+    //btn_rd[0].setLongRepeatMode(1);
     btn_rd[1].setMultiBtn(1); //设置为多个按钮,不识别双击或三击
     btn_rd[1].setLongRepeatMode(0);
-    btn_rd[2].setLongPressMs(1); //不识别双击三击, 只有按一下或者长按, 并且开启连按
+    btn_rd[2].long_press_ms = 1; //不识别双击三击, 只有按一下或者长按, 并且开启连按
     btn_rd[2].setLongRepeatMode(1);
   }
 #ifdef ESP8266 //对于esp8266, 需要注册到ticker. 这是因为没freertos.
@@ -497,29 +500,47 @@ void ReadguyDriver::nvs_write(){
 #endif
 
 uint8_t ReadguyDriver::getBtn_impl(){ //按钮不可用, 返回0.
+  static uint32_t last=0;
   uint8_t res1,res2,res3,res4=0;
   switch(READGUY_buttons){
     case 1:
       res1=btn_rd[0].read();
       if(res1 == 1) res4 |= 1; //点按
-      else if(res1 == 2) res4 |= 2; //双击
-      else if(res1 == 4) res4 |= 4; //长按-确定
+      else if(res1 == 2) res4 |= 4; //双击-确定
       else if(res1 == 3) res4 |= 8; //三击-返回
+      else if(res1 == 4) res4 |= 2; //长按-向上翻页
+      else if(res1 == 5) res4 |= 3; //单击后长按-新增操作(可以连按)
       break;
     case 2:
       res1=btn_rd[0].read(); //两个按钮引脚都读取
       res2=btn_rd[1].read();
-      if(res1 == 1) res4 |= 1;      //左键点按-向下翻页
-      else if(res1 == 4) res4 |= 2; //左键长按-向上翻页
-      if(res2 == 1) res4 |= 4;      //右键点按-确定
-      else if(res2 == 4) res4 |= 8; //右键长按-返回
+      if(millis()-last>500){
+        if(res1 == 1) res4 |= 1;      //左键点按-向下翻页
+        else if(res1 == 4) {
+          res4 |= 2; //左键长按-向上翻页
+          //if(btn_rd[1].isPressedRaw()) res4 |= 1;
+        }
+      }
+      if(btn_rd[0].isPressedRaw() && res2){
+        res4 |= 3;      //右键点按-确定
+        last=millis();
+      }
+      else{
+        if(res2 == 1) res4 |= 4;      //右键点按-确定
+        else if(res2 == 4) res4 |= 8; //右键长按-返回
+      }
+      if(res4==5 || res4==6) res4=3;
       break;
     case 3:
       res1=btn_rd[0].read();
       res2=btn_rd[1].read();
       res3=btn_rd[2].read();
-      if(res1 == 4) res4 |= 1;
-      if(res3 == 4) res4 |= 2;
+      if(res1 && millis()-last >= btn_rd[1].long_repeat_ms && (!btn_rd[2].isPressedRaw())) res4 |= 2;
+      if(res3) {
+        res4 |= ((btn_rd[0].isPressedRaw()<<1)|1);
+        last=millis();
+      }
+      //if(res3 && ((millis()-last)<btn_rd[0].long_repeat_ms)) res4 |=3;
       if(res2 == 1) res4 |= 4;
       else if(res2 == 4) res4 |= 8;
       break;

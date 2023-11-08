@@ -78,11 +78,18 @@ void guy_button::begin(uint8_t _pin, std_U8_function_U8 f, bool activeLow /* = t
   state = get_state_cb(pin);
   min_debounce    =25;   //去抖时间
   long_press_ms   =300;  //长按持续时间+双击识别间隔最大时间
-  long_repeat_ms  =150;  //长按连按间隔时间
+  long_repeat_ms  =200;  //长按连按间隔时间
   multibtn        =0;
   lk=0;
 }
-
+bool guy_button::isPressedRaw() {
+  int mi=millis();
+  while(lk) if(millis()-mi>GUYBTN_READ_TIMEOUT) return 0; //等待数据读完
+  lk=3;
+  bool willreturn = (get_state_cb(pin) == _pressedState);
+  lk=0;
+  return willreturn;
+}
 uint8_t guy_button::read() { //注意ticker不能在此触发
   int mi=millis();
   while(lk) if(millis()-mi>GUYBTN_READ_TIMEOUT) return 0; //等待数据读完
@@ -91,13 +98,14 @@ uint8_t guy_button::read() { //注意ticker不能在此触发
   if(state == _pressedState && n - down_ms>= long_press_ms && long_clicked < n){
     long_clicked = trig_mode?(n+long_repeat_ms):0xfffffffful;
     lk=0;
-    return GUYBUTTON_long_click;
+    return (click_count>=3)?GUYBUTTON_xxlong_click:\
+            ((click_count==2)?GUYBUTTON_xlong_click:GUYBUTTON_long_click);
   }
   uint8_t res = last_click_type;
   last_click_type = GUYBUTTON_empty;
   was_pressed = false;
   lk=0;
-  return (res==GUYBUTTON_long_click)?GUYBUTTON_empty:res;
+  return (res>=GUYBUTTON_long_click)?GUYBUTTON_empty:res;
 }
 
 void guy_button::loop() {
@@ -140,8 +148,9 @@ void guy_button::loop() {
       // was there a longclick?
       if (longclick_detected) {
         // was it part of a combination?
-        if (click_count == 1) {
-          last_click_type = GUYBUTTON_long_click;
+        if (click_count) {
+          last_click_type = (click_count>=3)?GUYBUTTON_xxlong_click:\
+            ((click_count==2)?GUYBUTTON_xlong_click:GUYBUTTON_long_click);
           was_pressed = true;
         }
         longclick_detected = false;

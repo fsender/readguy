@@ -250,6 +250,8 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     bool SDinside(bool check=true) { return check?setSDcardDriver():READGUY_sd_ok; };
     /// @brief 检查按钮. 当配置未完成时,按钮不可用, 返回0.
     uint8_t getBtn() { return (READGUY_cali==127)?getBtn_impl():0; }
+    /// @brief 根据按钮ID来检查按钮. 注意这里如果按下返回0, 没按下或者按钮无效返回1
+    //uint8_t getBtn(unsigned int btnID){return btnID<getButtonsCount()?(!(btn_rd[0].isPressedRaw())):1;}
     /** @brief 返回可用的文件系统. 当SD卡可用时, 返回SD卡. 否则根据情况返回最近的可用文件系统
      *  @param initSD 2:总是重新初始化SD卡; 1:若SD卡不可用则初始化; 0:SD卡不可用则返回LittleFS. */
     fs::FS &guyFS(uint8_t initSD = 0);
@@ -384,6 +386,13 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     int drvHeight() const { return READGUY_cali==127?guy_dev->drv_height():0; } //返回显示屏硬件高度(不是画幅高度)
   //int width () const { return (getRotation()&1)?drvHeight():drvWidth(); }
   //int height() const { return (getRotation()&1)?drvWidth():drvHeight(); }
+    size_t getFreeMem() const { return 
+#ifdef ESP8266
+      ESP.getFreeHeap();
+#else
+      esp_get_free_heap_size();
+#endif
+    }
 //  private:
     void implBeginTransfer() { guy_dev->BeginTransfer(); } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!
     void implEndTransfer()   { guy_dev->EndTransfer();   } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!

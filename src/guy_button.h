@@ -76,14 +76,17 @@ SOFTWARE.
 #define GUYBUTTON_double_click   2
 #define GUYBUTTON_triple_click   3
 #define GUYBUTTON_long_click     4
+#define GUYBUTTON_xlong_click    5
+#define GUYBUTTON_xxlong_click   6
 #define GUYBTN_READ_TIMEOUT    100
 #define GUYBTN_LOOP_TIMEOUT     10
 
 class guy_button{
-  protected:
+  public:
     uint16_t min_debounce    ;   //去抖时间
     uint16_t long_press_ms   ;  //长按持续时间+双击识别间隔最大时间
     uint16_t long_repeat_ms  ;  //长按连按间隔时间
+  protected:
     uint8_t pin = 255; //未定义引脚
     uint8_t state;
     uint8_t prev_state;
@@ -114,16 +117,19 @@ class guy_button{
     void setLongRepeatMode(bool trigMode) { trig_mode = trigMode; }
     unsigned int wasPressedFor() const { return down_time_ms; }
     bool isPressed() const { return (state == _pressedState); }
-    bool isPressedRaw() { return (get_state_cb(pin) == _pressedState); }
+    bool isPressedRaw(); // { return (get_state_cb(pin) == _pressedState); }
     bool wasPressed(){ if(was_pressed){ was_pressed = false; return true; } return false; }
     uint8_t getNumberOfClicks() const{ return click_count;}
     uint8_t getType() const { return last_click_type; }
     uint8_t read();
     void loop();
     void setMultiBtn(uint8_t btns) { multibtn = btns; }
-    void setMinDebounce(short n) { min_debounce    =n;}   //去抖时间
+    /* void setMinDebounce(short n) { min_debounce    =n;}   //去抖时间
     void setLongPressMs(short n) { long_press_ms   =n;}  //长按持续时间+双击识别间隔最大时间
     void setLongRepeat(short n)  { long_repeat_ms  =n;}  //长按连按间隔时间
+    void getMinDebounce(short n) { min_debounce    =n;}   //去抖时间
+    void getLongPressMs(short n) { long_press_ms   =n;}  //长按持续时间+双击识别间隔最大时间
+    void getLongRepeat(short n)  { long_repeat_ms  =n;}  //长按连按间隔时间 */
 };
 
 #endif /* END OF FILE. ReadGuy project. */
