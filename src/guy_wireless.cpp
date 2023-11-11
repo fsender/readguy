@@ -400,7 +400,7 @@ void ReadguyDriver::handlePinSetup(){
     args_name[15],args_name[17],args_name[19],args_name[21],args_name[12],args_name[13]
   };
   static const PROGMEM int dem_args_val[DRIVER_TEMPLATE_N][DRIVER_TEMPLATE_ARRAY_L]={
-    { 6,15, 0, 2, 4, 5, 2, 3, 0,-1,-1,13,14},
+    { 6,15, 0, 2, 4, 5, 2, 0, 3,-1,-1,13,14},
     //{ 0,10, 9, 8, 7, 4, 3, 2, 3, 5, 6,SDA,SCL},
     //{ 0,15, 4, 2, 5,-1, 1, 0,-1,-1,-1,-1,-1} //微雪官方例程板子不支持SD卡, 也不支持I2C. 按钮为boot按钮
   };
