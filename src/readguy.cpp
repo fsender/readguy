@@ -660,20 +660,14 @@ uint8_t ReadguyDriver::getBtn_impl(){ //按钮不可用, 返回0.
     case 2:
       res1=btn_rd[0].read(); //两个按钮引脚都读取
       res2=btn_rd[1].read();
-      if(millis()-last>500){
-        if(res1 == 1) res4 |= 1;      //左键点按-向下翻页
-        else if(res1 == 4) {
-          res4 |= 2; //左键长按-向上翻页
-          //if(btn_rd[1].isPressedRaw()) res4 |= 1;
-        }
-      }
-      if(btn_rd[0].isPressedRaw() && res2){
-        res4 |= 3;      //右键点按-确定
-        last=millis();
-      }
-      else{
-        if(res2 == 1) res4 |= 4;      //右键点按-确定
+      
+      if(res1 && millis()-last >= btn_rd[1].long_press_ms && (!btn_rd[1].isPressedRaw()))
+        res4 = (res1 == 1)?1:2;      //左键点按-向下翻页
+      if(res2) {
+        if((btn_rd[0].isPressedRaw()<<1)) res4 |= 3;
+        else if(res2 == 1) res4 |= 4; //右键点按-确定
         else if(res2 == 4) res4 |= 8; //右键长按-返回
+        last=millis();
       }
       if(res4==5 || res4==6) res4=3;
       break;
