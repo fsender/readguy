@@ -36,7 +36,6 @@
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
 #include "guy_epaper_config.h"
-#define EPD_DRIVERS_NUM_MAX 12 //此选项请不要取消注释掉
 
 #define FILL_WHITE ([](int)->uint8_t{return 0xff;})
 #define FILL_BLACK ([](int)->uint8_t{return 0x00;})
@@ -114,8 +113,6 @@ public:
 #ifdef MEPD_DEBUG_DISPLAY
     friend class LGFX;
 #endif
-  private:
-    int16_t guy_width=0,guy_height=0;
 };
 
 #endif /* END OF FILE. ReadGuy project.

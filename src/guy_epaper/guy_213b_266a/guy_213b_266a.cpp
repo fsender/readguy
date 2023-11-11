@@ -30,7 +30,8 @@
 #include <stdlib.h>
 #include "guy_213b_266a.h"
 // #define MEPD_DEBUG_WAVE
-#ifdef READGUY_DEV_266A
+#if (defined(READGUY_DEV_213B) || defined(READGUY_DEV_213B3C) \
+|| defined(READGUY_DEV_266A) || defined(READGUY_DEV_266A3C))
 namespace guydev_213B_266A{
 static const PROGMEM unsigned char lutSlow_vcom0[] ={
   0x00, 0x08, 0x00, 0x00, 0x00, 0x02,
@@ -68,21 +69,30 @@ static const PROGMEM unsigned char lutSlow_b_b[] ={
 static const PROGMEM unsigned char lutFast_[]={
   0x00,0x18,0x5a,0xa5,0x24
 };
+static const PROGMEM unsigned char greyLutLevel[]={
+  0, 3, 6, 9,12,15,18,21,24,28,31,34,37,42,48,54, //for BWR displays
+  0, 3, 5, 7,10,13,16,19,22,25,29,32,35,38,43,49,
+  0, 3, 5, 6, 8,11,14,17,20,23,26,29,32,35,39,44,
+  0, 2, 4, 5, 6, 8,10,13,15,18,21,24,27,31,35,39,
+  0, 2, 3, 5, 6, 7, 8,10,12,15,17,19,22,24,27,30,
+  0, 2, 3, 4, 5, 6, 7, 8,10,12,14,16,18,20,22,24,
+
+  0, 3, 3, 3, 4, 4, 5, 6, 7, 9,12,16,21,28,36,48,
+};
 drv_base::drv_base(){
   guy_lutArray[0] = lutSlow_vcom0;
   guy_lutArray[1] = lutSlow_w_w;
   guy_lutArray[2] = lutSlow_b_w;
   guy_lutArray[3] = lutSlow_w_b;
   guy_lutArray[4] = lutSlow_b_b;
-  guy_lutArray[5] = lutFast_;
 }
 void drv_base::epd_init(){
   //if(!Power_is_on) Reset();
     guy_epdCmd(0x01);
     guy_epdParam(0x03);
-    guy_epdParam(0x00);
-    guy_epdParam(0x2b);
-    guy_epdParam(0x2b);
+    guy_epdParam(0x10);
+    guy_epdParam(isBWR?0x3f:0x2b);
+    guy_epdParam(isBWR?0x3f:0x2b);
     guy_epdParam(0x03);
     guy_epdCmd(0x06);
     guy_epdParam(0x17);
@@ -92,7 +102,7 @@ void drv_base::epd_init(){
     guy_epdParam(0xbf);
     guy_epdParam(0x0d);
     guy_epdCmd(0x30);
-    guy_epdParam(0x29); //0x3a:100Hz, 0x29:150Hz
+    guy_epdParam(isBWR?0x3b:0x29); //0x3a:100Hz, 0x29:150Hz
     guy_epdCmd(0x61);
     guy_epdParam(0x98);
     guy_epdParam(0x01);
@@ -118,9 +128,9 @@ void drv_base::SendLuts(bool part_lut){
     guy_epdCmd(i+0x20);
     for(int j=0;j<(i==0?44:42);j++){
       if(part_lut){
-        if(j==4 && ((i==2) || (greyHQ==3 && i==4))) guy_epdParam(15);
-        else if(j==greyHQ) guy_epdParam(greyLut);
-        else if(j==0) guy_epdParam(pgm_read_byte(guy_lutArray[5]+(i)));
+        if(j==4 && ((i==2) || (greyHQ==3 && i==4))) guy_epdParam(isBWR?0x2f:0x0f); //刷黑->白
+        else if(j==greyHQ) guy_epdParam(isBWR?pgm_read_byte(greyLutLevel+(greyLut+refTime*16)):greyLut);
+        else if(j==0) guy_epdParam(pgm_read_byte(lutFast_+(i)));
         else if(j==5) guy_epdParam(1);
         else guy_epdParam(0x0);
       }
@@ -141,6 +151,7 @@ void drv_base::drv_init(){
   //drv_color(0xff);
 }
 void drv_base::drv_fullpart(bool part){ //切换慢刷/快刷功能
+  if(lastRefresh) return;
   if(!Power_is_on) part=0;
   if(!part) greyLut=15; //恢复默认的灰度模式
   part_mode = part;
@@ -167,31 +178,28 @@ void drv_base::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色
   guy_epdCmd(0x92);
   if(part_mode){
     guy_epdCmd(0x30);
-    guy_epdParam(0x3a); //0x3a:100Hz, 0x29:150Hz
+    //guy_epdParam(0x3a); //黑白色用此行, 三色用下一行
+    guy_epdParam(isBWR?0x19:(refTime?0x21:0x3a)); //0x3a:100Hz, 0x29:150Hz
     send_zoneInfo();
-    guy_epdCmd(0x12);
-    EndTransfer();
   }
-  else{
-    guy_epdCmd(0x12);
-    EndTransfer();
-  }
+  guy_epdCmd(0x12);
+  EndTransfer();
   lastRefresh=millis();
   }
   if(m&2){//stage 2
     uint32_t ms=millis()-lastRefresh;
     if(part_mode){
-      if(ms<200) guy_epdBusy(ms-200);
-      //guy_epdBusy(-200);
+      if((int32_t)ms<fastRefTime) guy_epdBusy((int32_t)ms-fastRefTime);
+      refTime+=(refTime<5);
     }
     else{
-      if(ms<2000) guy_epdBusy(ms-2000);
-      //guy_epdBusy(-2000);
+      if((int32_t)ms<slowRefTime) guy_epdBusy((int32_t)ms-slowRefTime);
       BeginTransfer();
       epd_init();
       SendLuts(1);
       guy_epdCmd(0x92);
       EndTransfer();
+      refTime=0;
     }
     lastRefresh=0;
   }
@@ -213,6 +221,7 @@ void drv_base::drv_draw16grey_step(std::function<uint8_t(int)> f, int step){
   if(_quality&1) return readguyEpdBase::drv_draw16grey_step(f,step);
   if(step==1){
     greyHQ=3;
+    refTime=6;
     drv_setDepth(3);
     drv_fullpart(1); //开始快刷
   }
@@ -221,6 +230,7 @@ void drv_base::drv_draw16grey_step(std::function<uint8_t(int)> f, int step){
   drv_dispWriter(f);
   if(step==15){
     greyHQ=4;
+    refTime=5;
     drv_setDepth(15);
   }
 } //据说可以设置灰度渲染方式. 好像是调用setGreyQuality函数就行来着

@@ -98,6 +98,7 @@ void drvBase::drv_init(){ //new init method can init without freshing.
   //drv_color(0xffu); //睡眠模式下始终需要慢刷
 }
 void drvBase::drv_fullpart(bool part){ //切换慢刷/快刷功能
+  if(lastRefresh) return;
   if(!part) iLut=15;
   if(sleeping) iLut=15;
   else Init(part?lut_fast:lut_slow);

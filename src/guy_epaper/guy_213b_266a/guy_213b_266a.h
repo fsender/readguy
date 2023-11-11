@@ -6,8 +6,10 @@
  * @file guy_213b_266a.h
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
  * @brief 2.13英寸B型墨水屏和 2.66英寸墨水屏 驱动库函数 头文件
- * @version 1.0
- * @date 2023-09-21
+ * 增加了对三色屏幕的支持
+ * @version 1.1
+ * @date create: 2023-09-21
+ * last modify: 2023-11-11
 
  * @attention
  * Copyright (c) 2022-2023 FriendshipEnder
@@ -29,7 +31,8 @@
 
 #include "../guy_epdbase.h"
 #if (!defined(_GUY_EPD213B_266A_H_FILE) && \
-  (defined(READGUY_DEV_266A) || defined(READGUY_DEV_213B)))
+  (defined(READGUY_DEV_213B) || defined(READGUY_DEV_213B3C) \
+|| defined(READGUY_DEV_266A) || defined(READGUY_DEV_266A3C)))
 #define _GUY_EPD213B_266A_H_FILE
 
 namespace guydev_213B_266A{
@@ -49,7 +52,6 @@ public:
 protected:
   int epdWidth;
   int epdHeight;
-private:
   void epd_init();
   void send_zoneInfo();
   void SendLuts(bool part_lut);
@@ -57,20 +59,38 @@ private:
   uint8_t Power_is_on = 2; //初始为未上电
   uint8_t greyLut=15;
   uint8_t greyHQ=4; // greyHQ==3 时 为高品质刷新灰度 否则为常规方式刷新灰度
-  const uint8_t *guy_lutArray[6];
+  uint8_t refTime=0;
+  uint8_t isBWR=0; //三色2.66将此屏幕数值改为1.
+  int16_t slowRefTime;
+  int16_t fastRefTime;
+  const uint8_t *guy_lutArray[5];
 };
 #ifdef READGUY_DEV_213B
 class dev213B : public drv_base {
   public:
-    dev213B(){ epdWidth=104; epdHeight=212; }
+    dev213B(){ epdWidth=104; epdHeight=212; slowRefTime=1300; fastRefTime=200; }
     int drv_ID() const { return READGUY_DEV_213B; }
+};
+#endif
+#ifdef READGUY_DEV_213B3C
+class dev213B3C : public drv_base {
+  public:
+    dev213B3C(){ epdWidth=104; epdHeight=212; isBWR=1; slowRefTime=2800; fastRefTime=800; }
+    int drv_ID() const { return READGUY_DEV_213B3C; }
 };
 #endif
 #ifdef READGUY_DEV_266A
 class dev266A : public drv_base {
   public:
-    dev266A(){ epdWidth=152; epdHeight=296; }
+    dev266A(){ epdWidth=152; epdHeight=296; slowRefTime=1300; fastRefTime=200; }
     int drv_ID() const { return READGUY_DEV_266A; }
+};
+#endif
+#ifdef READGUY_DEV_266A3C
+class dev266A3C : public drv_base {
+  public:
+    dev266A3C(){ epdWidth=152; epdHeight=296; isBWR=1; slowRefTime=2800; fastRefTime=800; }
+    int drv_ID() const { return READGUY_DEV_266A3C; }
 };
 #endif
 } 

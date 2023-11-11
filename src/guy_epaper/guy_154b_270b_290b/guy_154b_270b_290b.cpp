@@ -144,6 +144,7 @@ void drvSSD168x::drv_init(){
   //drv_color(0xffu);
 }
 void drvSSD168x::drv_fullpart(bool part){ //切换慢刷/快刷功能
+  if(lastRefresh) return;
   if(!epd_PowerOn) part=0; //未上电 无法局刷
   if(!part) { iLut=15; greyScaling=0; }
   _part=part;

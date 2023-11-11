@@ -182,6 +182,7 @@ void drv::drv_init(){ //初始化屏幕
   //drv_color(0xff);
 }
 void drv::drv_fullpart(bool part){ //初始化慢刷功能
+  if(lastRefresh) return;
   if(epdFull<=1) epdFull = !part; //epdFull==2代表睡眠中, 不能快刷
   if(epdFull) GreyScaling=0;
 }

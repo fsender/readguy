@@ -187,8 +187,8 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷�
   }
   if(m&2){//stage 2
     uint32_t ms=millis()-lastRefresh;
-    uint32_t u=part_mode?800:3600;
-    if(ms<u) guy_epdBusy(ms-u);
+    int32_t u=part_mode?800:3600;
+    if((int32_t)ms<u) guy_epdBusy((int32_t)ms-u);
     lastRefresh=0;
   BeginTransfer();
   if(part_mode){
@@ -224,6 +224,7 @@ void drv::drv_init(){
   //drv_color(0xffu);
 }
 void drv::drv_fullpart(bool part){ //切换慢刷/快刷功能
+  if(lastRefresh) return;
   if(Power_is_on) {
     if(!part) customLut = CUSTOM_LUT_DISABLE;
     part_mode = part;

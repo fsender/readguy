@@ -38,6 +38,7 @@ void drv::drv_init(){
   ips.fillScreen(0xffff);
 }
 void drv::drv_fullpart(bool part){
+  if(lastRefresh) return;
   partMode=part;
 }
 void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷新

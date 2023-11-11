@@ -38,6 +38,36 @@ int8_t ReadguyDriver::pin_cmx=-1;
 const PROGMEM char ReadguyDriver::projname[8] = "readguy";
 const PROGMEM char ReadguyDriver::tagname[7] = "hwconf";
 volatile uint8_t ReadguyDriver::spibz=0;
+#ifndef DYNAMIC_PIN_SETTINGS
+const int8_t ReadguyDriver::config_data[22] = {
+  127              , //READGUY_cali
+  READGUY_shareSpi ,
+  READGUY_epd_type ,// 对应的epd驱动程序代号, -1为未指定
+  //显示驱动部分, 显示默认使用vspi (vspi也是默认SPI库的通道)
+  READGUY_epd_mosi ,// 目标显示器的 MOSI 引脚
+  READGUY_epd_sclk ,// 目标显示器的 SCLK 引脚
+  READGUY_epd_cs   ,// 目标显示器的 CS   引脚
+  READGUY_epd_dc   ,// 目标显示器的 DC   引脚
+  READGUY_epd_rst  ,// 目标显示器的 RST  引脚
+  READGUY_epd_busy ,// 目标显示器的 BUSY 引脚
+  //sd卡驱动部分, 默认使用hspi (sd卡建议用hspi)
+  READGUY_sd_miso  ,// 目标sd卡的 MISO 引脚, sd_share_spi == 1 时无效
+  READGUY_sd_mosi  ,// 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
+  READGUY_sd_sclk  ,// 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
+  READGUY_sd_cs    ,// 目标sd卡的 CS   引脚.
+  READGUY_i2c_sda  ,// 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
+  READGUY_i2c_scl  ,// 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
+  //按键驱动部分, 为负代表高触发, 否则低触发,
+  //注意, 这里的io编号是加1的, 即 1或-1 代表 gpio0 的低触发/高触发
+  READGUY_btn1     , 
+  READGUY_btn2     , 
+  READGUY_btn3     , 
+  READGUY_bl_pin   ,//前置光接口引脚IO
+  READGUY_rtc_type ,//使用的RTC型号(待定, 还没用上)
+  0                ,//READGUY_sd_ok   SD卡已经成功初始化
+  0                 //READGUY_buttons 按钮个数, 0-3都有可能
+};
+#endif
 #ifndef ESP8266
 SPIClass *ReadguyDriver::sd_spi =nullptr;
 SPIClass *ReadguyDriver::epd_spi=nullptr;
@@ -85,10 +115,15 @@ uint8_t ReadguyDriver::init(uint8_t WiFiSet, bool initepd){
 #endif
   nvs_deinit();
 #else
+  nvs_init();
   if(checkEpdDriver()!=127) setEpdDriver(initepd/* ,g_width,g_height */);  //初始化屏幕
   else for(;;); //此处可能添加程序rollback等功能操作(比如返回加载上一个程序)
   setSDcardDriver();
   setButtonDriver();
+  if(!nvs_read()){
+    nvs_write(); //全部成功之后, 写入引脚信息到NVS.
+  }
+  nvs_deinit();
 #endif
   Serial.println(F("[Guy init] init done."));
   READGUY_cali=127;
@@ -111,47 +146,124 @@ uint8_t ReadguyDriver::checkEpdDriver(){
 #endif
   if(guy_dev != nullptr && READGUY_epd_type!=guy_dev->drv_ID()) delete guy_dev; //释放多余的内存
   //Serial.printf("initing epd %s...\n",epd_drivers_list[READGUY_epd_type]);
+#ifdef DYNAMIC_PIN_SETTINGS
   switch (READGUY_epd_type){
 #ifdef READGUY_DEV_154A
-    case READGUY_DEV_154A:  guy_dev = new guydev_154A_290A       ::dev154A; break; //适用于一般的价签黑白屏
+    case READGUY_DEV_154A:    guy_dev = new guydev_154A_290A       ::dev154A;   break; //适用于一般的价签黑白屏
 #endif
 #ifdef READGUY_DEV_154B
-    case READGUY_DEV_154B:  guy_dev = new guydev_154B_270B_290B  ::dev154B; break; //适用于
+    case READGUY_DEV_154B:    guy_dev = new guydev_154B_270B_290B  ::dev154B;   break; //适用于
 #endif
 #ifdef READGUY_DEV_213A
-    case READGUY_DEV_213A:  guy_dev = new guydev_213A            ::drv;     break;
+    case READGUY_DEV_213A:    guy_dev = new guydev_213A            ::drv;       break;
 #endif
 #ifdef READGUY_DEV_266A
-    case READGUY_DEV_266A:  guy_dev = new guydev_213B_266A       ::dev266A; break;
+    case READGUY_DEV_266A:    guy_dev = new guydev_213B_266A       ::dev266A;   break;
 #endif
 #ifdef READGUY_DEV_213B
-    case READGUY_DEV_213B:  guy_dev = new guydev_213B_266A       ::dev213B; break;
+    case READGUY_DEV_213B:    guy_dev = new guydev_213B_266A       ::dev213B;   break;
 #endif
 #ifdef READGUY_DEV_290A
-    case READGUY_DEV_290A:  guy_dev = new guydev_154A_290A       ::dev290A; break;
+    case READGUY_DEV_290A:    guy_dev = new guydev_154A_290A       ::dev290A;   break;
 #endif
 #ifdef READGUY_DEV_290B
-    case READGUY_DEV_290B:  guy_dev = new guydev_154B_270B_290B  ::dev290B; break;
+    case READGUY_DEV_290B:    guy_dev = new guydev_154B_270B_290B  ::dev290B;   break;
 #endif
 #ifdef READGUY_DEV_420A
-    case READGUY_DEV_420A:  guy_dev = new guydev_420A            ::drv;     break;
+    case READGUY_DEV_420A:    guy_dev = new guydev_420A            ::drv;       break;
 #endif
 #ifdef READGUY_DEV_420B
-    case READGUY_DEV_420B:  guy_dev = new guydev_420B            ::drv;     break;
+    case READGUY_DEV_420B:    guy_dev = new guydev_420B            ::drv;       break;
 #endif
 #ifdef READGUY_DEV_370A
-    case READGUY_DEV_370A:  guy_dev = new guydev_370A            ::drv;     break;
+    case READGUY_DEV_370A:    guy_dev = new guydev_370A            ::drv;       break;
 #endif
 #ifdef MEPD_DEBUG_DISPLAY
-    case MEPD_DEBUG_DISPLAY:guy_dev = new EpdLcdDebug            ::drv;     break;
+    case MEPD_DEBUG_DISPLAY:  guy_dev = new EpdLcdDebug            ::drv;       break;
 #endif
 #ifdef READGUY_DEV_270B
-    case READGUY_DEV_270B:  guy_dev = new guydev_154B_270B_290B  ::dev270B; break;
+    case READGUY_DEV_270B:    guy_dev = new guydev_154B_270B_290B  ::dev270B;   break;
 #endif
+#ifdef READGUY_DEV_213B3C
+    case READGUY_DEV_213B3C:  guy_dev = new guydev_213B_266A       ::dev213B3C; break;
+#endif
+#ifdef READGUY_DEV_266A3C
+    case READGUY_DEV_266A3C:  guy_dev = new guydev_213B_266A       ::dev266A3C; break;
+#endif
+
+#ifdef READGUY_DEV_154C
+    case READGUY_DEV_154C:    guy_dev = new guydev_154C            ::drv;       break;
+#endif
+#ifdef READGUY_DEV_370B
+    case READGUY_DEV_370B:    guy_dev = new guydev_370B            ::drv;       break;
+#endif
+#ifdef READGUY_DEV_426A
+    case READGUY_DEV_426A:    guy_dev = new guydev_426A            ::drv;       break;
+#endif
+#ifdef READGUY_DEV_583A
+    case READGUY_DEV_583A:    guy_dev = new guydev_583A            ::drv;       break;
+#endif
+#ifdef READGUY_DEV_583B
+    case READGUY_DEV_583B:    guy_dev = new guydev_583B            ::drv;       break;
+#endif
+#ifdef READGUY_DEV_750A
+    case READGUY_DEV_750A:    guy_dev = new guydev_750A            ::drv;       break;
+#endif
+#ifdef READGUY_DEV_1020A
+    case READGUY_DEV_1020A:   guy_dev = new guydev_1020A           ::drv;       break;
+#endif
+  //添加新屏幕型号 add displays here
     default: 
       Serial.println(F("[GUY ERR] EPD DRIVER IC NOT SUPPORTED!\n"));
       return 127;
   }
+#else
+#if   (defined(READGUY_DEV_154A)    && (READGUY_epd_type==READGUY_DEV_154A))
+    guy_dev = new guydev_154A_290A       ::dev154A; //适用于一般的价签黑白屏
+#elif (defined(READGUY_DEV_154B)    && (READGUY_epd_type==READGUY_DEV_154B))
+    guy_dev = new guydev_154B_270B_290B  ::dev154B; //适用于
+#elif (defined(READGUY_DEV_213A)    && (READGUY_epd_type==READGUY_DEV_213A))
+    guy_dev = new guydev_213A            ::drv;    
+#elif (defined(READGUY_DEV_266A)    && (READGUY_epd_type==READGUY_DEV_266A))
+    guy_dev = new guydev_213B_266A       ::dev266A;
+#elif (defined(READGUY_DEV_213B)    && (READGUY_epd_type==READGUY_DEV_213B))
+    guy_dev = new guydev_213B_266A       ::dev213B;
+#elif (defined(READGUY_DEV_290A)    && (READGUY_epd_type==READGUY_DEV_290A))
+    guy_dev = new guydev_154A_290A       ::dev290A;
+#elif (defined(READGUY_DEV_290B)    && (READGUY_epd_type==READGUY_DEV_290B))
+    guy_dev = new guydev_154B_270B_290B  ::dev290B;
+#elif (defined(READGUY_DEV_420A)    && (READGUY_epd_type==READGUY_DEV_420A))
+    guy_dev = new guydev_420A            ::drv;    
+#elif (defined(READGUY_DEV_420B)    && (READGUY_epd_type==READGUY_DEV_420B))
+    guy_dev = new guydev_420B            ::drv;    
+#elif (defined(READGUY_DEV_370A)    && (READGUY_epd_type==READGUY_DEV_370A))
+    guy_dev = new guydev_370A            ::drv;    
+#elif (defined(MEPD_DEBUG_DISPLAY)  && (READGUY_epd_type==MEPD_DEBUG_DISPLAY))
+    guy_dev = new EpdLcdDebug            ::drv;    
+#elif (defined(READGUY_DEV_270B)    && (READGUY_epd_type==READGUY_DEV_270B))
+    guy_dev = new guydev_154B_270B_290B  ::dev270B;
+#elif (defined(READGUY_DEV_213B3C)  && (READGUY_epd_type==READGUY_DEV_213B3C))
+    guy_dev = new guydev_213B_266A       ::dev213B3C;
+#elif (defined(READGUY_DEV_266A3C)  && (READGUY_epd_type==READGUY_DEV_266A3C))
+    guy_dev = new guydev_213B_266A       ::dev266B3C;
+
+#elif (defined(READGUY_DEV_154C)    && (READGUY_epd_type==READGUY_DEV_154C))
+    guy_dev = new guydev_154C            ::drv;
+#elif (defined(READGUY_DEV_370B)    && (READGUY_epd_type==READGUY_DEV_370B))
+    guy_dev = new guydev_370B            ::drv;
+#elif (defined(READGUY_DEV_426A)    && (READGUY_epd_type==READGUY_DEV_426A))
+    guy_dev = new guydev_426A            ::drv;
+#elif (defined(READGUY_DEV_583A)    && (READGUY_epd_type==READGUY_DEV_583A))
+    guy_dev = new guydev_583A            ::drv;
+#elif (defined(READGUY_DEV_583B)    && (READGUY_epd_type==READGUY_DEV_583B))
+    guy_dev = new guydev_583B            ::drv;
+#elif (defined(READGUY_DEV_750A)    && (READGUY_epd_type==READGUY_DEV_750A))
+    guy_dev = new guydev_750A            ::drv;
+#elif (defined(READGUY_DEV_1020A)   && (READGUY_epd_type==READGUY_DEV_1020A))
+    guy_dev = new guydev_1020A           ::drv;
+#endif
+  //添加新屏幕型号 add displays here
+#endif
 #if (defined(ESP8266))
   SPI.begin();
   SPI.setFrequency(ESP8266_SPI_FREQUENCY); ///< 1MHz
@@ -172,7 +284,7 @@ uint8_t ReadguyDriver::checkEpdDriver(){
   Serial.println(F("[Guy SPI] drvBase Init OK"));
   return READGUY_epd_type;
 }
-void ReadguyDriver::setEpdDriver(bool initepd/* ,int g_width,int g_height */){
+void ReadguyDriver::setEpdDriver(bool initepd, bool initGFX){
   guy_dev->spi_tr_release = in_release;
   guy_dev->spi_tr_press   = in_press;
   if(initepd) guy_dev->drv_init(); //初始化epd驱动层
@@ -181,21 +293,23 @@ void ReadguyDriver::setEpdDriver(bool initepd/* ,int g_width,int g_height */){
   //if(g_height) guy_height = g_height;
   //else guy_height = guy_dev->drv_height();
   //以下依赖于你的图形驱动
-  setColorDepth(1); //单色模式
-  createPalette();  //初始化颜色系统
-  Serial.printf_P(PSTR("[Guy EPD] EPD init OK: w: %d, h: %d\n"),guy_dev->drv_width(),guy_dev->drv_height());
-   //创建画布. 根据LovyanGFX的特性, 如果以前有画布会自动重新生成新画布
-  //此外, 即使画布宽度不是8的倍数(如2.13寸单色),也支持自动补全8的倍数 ( 250x122 => 250x128 )
-  //为了保证图片显示功能的正常使用, 高度也必须是8的倍数.
-  createSprite(guy_dev->drv_width(),guy_dev->drv_height());
-  //这里发现如果用自定义的内存分配方式会更好一些. 不会导致返回的height不对. 但是因为LovyanGFX库未更新 暂时不能这么用.
-  //setRotation(1); //旋转之后操作更方便
-  setRotation(0);
-  setFont(&fonts::Font0);
-  setCursor(0,0);
-  setTextColor(0);
-  fillScreen(1); //开始先全屏白色
+  if(initGFX){
+    setColorDepth(1); //单色模式
+    createPalette();  //初始化颜色系统
+    //创建画布. 根据LovyanGFX的特性, 如果以前有画布会自动重新生成新画布
+    //此外, 即使画布宽度不是8的倍数(如2.13寸单色),也支持自动补全8的倍数 ( 250x122 => 250x128 )
+    //为了保证图片显示功能的正常使用, 高度也必须是8的倍数.
+    createSprite(guy_dev->drv_width(),guy_dev->drv_height());
+    //这里发现如果用自定义的内存分配方式会更好一些. 不会导致返回的height不对. 但是因为LovyanGFX库未更新 暂时不能这么用.
+    setRotation(0); //默认的旋转方向就是0咯
+    setFont(&fonts::Font0);
+    setCursor(0,0);
+    setTextColor(0);
+    fillScreen(1); //开始先全屏白色
+  }
+  Serial.printf_P(PSTR("[Guy EPD] EPD init OK(%d): w: %d, h: %d\n"),guy_dev->drv_ID(),guy_dev->drv_width(),guy_dev->drv_height());
 }
+#ifdef READGUY_ENABLE_SD
 bool ReadguyDriver::setSDcardDriver(){
   /*重要信息: 有些引脚冲突是难以避免的, 比如8266 尤其需要重写这部分代码
     对于esp32也要注意这个引脚是否是一个合法的引脚
@@ -236,6 +350,17 @@ bool ReadguyDriver::setSDcardDriver(){
   }
   return READGUY_sd_ok;
 }
+#else
+bool ReadguyDriver::setSDcardDriver(){
+  READGUY_sd_ok=0;
+#ifdef READGUY_USE_LITTLEFS
+  LittleFS.begin();
+#else
+  SPIFFS.begin();
+#endif
+  return false;
+}
+#endif
 void ReadguyDriver::setButtonDriver(){
   if(READGUY_btn1) { //初始化按键. 注意高电平触发的引脚在初始化时要设置为下拉
     int8_t btn_pin=abs(READGUY_btn1)-1;
@@ -289,11 +414,11 @@ void ReadguyDriver::setButtonDriver(){
     btn_rd[1].setLongRepeatMode(0);
   }
   else if(READGUY_buttons==3){
-    btn_rd[0].long_press_ms = 150; //不识别双击三击, 只有按一下或者长按, 并且开启连按
+    btn_rd[0].long_press_ms = 50; //不识别双击三击, 只有按一下或者长按, 并且开启连按
     //btn_rd[0].setLongRepeatMode(1);
     btn_rd[1].setMultiBtn(1); //设置为多个按钮,不识别双击或三击
     btn_rd[1].setLongRepeatMode(0);
-    btn_rd[2].long_press_ms = 1; //不识别双击三击, 只有按一下或者长按, 并且开启连按
+    btn_rd[2].long_press_ms = 50; //不识别双击三击, 只有按一下或者长按, 并且开启连按
     btn_rd[2].setLongRepeatMode(1);
   }
 #ifdef ESP8266 //对于esp8266, 需要注册到ticker. 这是因为没freertos.
@@ -343,6 +468,7 @@ void ReadguyDriver::setButtonDriver(){
     }
   }  //关于按键策略, 我们在此使用多个Button2的类, 然后在一个task共享变量来确定上一个按键状态
 }
+#ifdef READGUY_ENABLE_SD
 fs::FS &ReadguyDriver::guyFS(uint8_t initSD){
   if(initSD==2 || (!READGUY_sd_ok && initSD)) setSDcardDriver();
   if(READGUY_sd_ok){
@@ -358,6 +484,16 @@ fs::FS &ReadguyDriver::guyFS(uint8_t initSD){
   return SPIFFS;
 #endif
 }
+#else
+fs::FS &ReadguyDriver::guyFS(uint8_t initSD){
+  (void)initSD; //avoid GCC warning
+#ifdef READGUY_USE_LITTLEFS
+  return LittleFS;
+#else
+  return SPIFFS;
+#endif
+}
+#endif
 void ReadguyDriver::setBright(int d){
   if(currentBright>=0 && d>=0 && d<=255){
     currentBright=d;
@@ -440,8 +576,7 @@ void ReadguyDriver::sleepEPD(){
   if(READGUY_cali==127) guy_dev->drv_sleep();
 }
 
-#if (!defined(DYNAMIC_PIN_SETTINGS)) //do nothing here.
-#elif (defined(INDEV_DEBUG))
+#if (defined(INDEV_DEBUG))
 void ReadguyDriver::nvs_init(){
 }
 void ReadguyDriver::nvs_deinit(){
@@ -461,12 +596,19 @@ void ReadguyDriver::nvs_deinit(){
 }
 bool ReadguyDriver::nvs_read(){
   char s[8];
-  for(unsigned int i=0;i<sizeof(config_data)+8;i++){
+  for(unsigned int i=0;i<
+#ifdef DYNAMIC_PIN_SETTINGS
+  sizeof(config_data)+
+#endif
+  8;i++){
     int8_t rd=(int8_t)EEPROM.read(2+i);
+#ifdef DYNAMIC_PIN_SETTINGS
     if(i>=8) config_data[i-8] = rd;
-    else s[i]=(char)rd;
+    else
+#endif
+      s[i]=(char)rd;
   }
-  Serial.printf("[Guy NVS] Get NVS...%d\n", config_data[0]);
+  Serial.printf("[Guy NVS] Get EEPROM...%d\n", config_data[0]);
   return !(strcmp_P(s,projname));
 }
 void ReadguyDriver::nvs_write(){
@@ -483,6 +625,7 @@ void ReadguyDriver::nvs_deinit(){
 }
 bool ReadguyDriver::nvs_read(){ //此处需要处理一些有关I2C的内容
   if(!nvsData.isKey(tagname)) return 0; //没有这个键值
+#ifdef DYNAMIC_PIN_SETTINGS
   size_t len=nvsData.getBytes(tagname,config_data,sizeof(config_data)); //读取的数据长度
   /*if(len<sizeof(config_data)){ //旧版本格式无法获取I2C相关数据, 设置为-1.
     for(int i=sizeof(config_data)-1;i>=15;i--)    //使用新版本格式来存储相关数据
@@ -492,6 +635,9 @@ bool ReadguyDriver::nvs_read(){ //此处需要处理一些有关I2C的内容
     nvsData.putBytes(tagname,config_data,sizeof(config_data)); //用新版本格式保存
   }*/
   return len==sizeof(config_data);
+#else
+  return 1;
+#endif
 }
 void ReadguyDriver::nvs_write(){
   if(nvsData.isKey(tagname)) nvsData.remove(tagname);

@@ -96,6 +96,7 @@ void setup(){
   //guy.print("Hello Readguy!"); //使用这个函数也能显示出字符串, 但是需要提前使用setCursor确定显示坐标
 
   guy.display(READGUY_FAST);   // 快速刷新. 将屏幕缓存内的内容显示到墨水屏幕上
+                               // 但是, 上电初始化之后的首次刷新必为慢速刷新
   //guy.display(READGUY_SLOW); // 慢速刷新. 
 
   guy.setCursor(10,30); //设置显示的坐标

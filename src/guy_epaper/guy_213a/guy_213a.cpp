@@ -113,6 +113,7 @@ void drv::drv_init(){ //初始化屏幕
   //drv_color(0xff);
 }
 void drv::drv_fullpart(bool part){ //初始化慢刷功能
+  if(lastRefresh) return;
   if(!epd_PowerOn) part=0; //未上电 无法局刷
   //if(part==epdFull) return;
   if(!part) iLut=15; //恢复默认的灰度模式

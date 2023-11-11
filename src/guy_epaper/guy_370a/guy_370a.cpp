@@ -110,7 +110,7 @@ void drv::drv_init(){ //初始化屏幕
   //drv_color(0xff);
 }
 void drv::drv_fullpart(bool part){ //切换慢刷/快刷功能
-  if(sleeping) return;
+  if(lastRefresh || sleeping) return;
   if(!part) {
     greyScaling=15; //恢复默认的灰度模式
     BeginTransfer();

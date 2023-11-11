@@ -59,7 +59,7 @@ static const PROGMEM char args_name[23][8]={
   static const char *NAME_guyDev266=NOT_SUPPORTED;
 #endif
 #ifdef READGUY_DEV_213B
-  static const PROGMEM char NAME_guyDev213M21[]="2.13寸三色";
+  static const PROGMEM char NAME_guyDev213M21[]="2.13寸低分辨率版";
 #else 
   static const char *NAME_guyDev213M21=NOT_SUPPORTED;
 #endif
@@ -98,6 +98,53 @@ static const PROGMEM char args_name[23][8]={
 #else 
   static const char *NAME_guyDev270_V2=NOT_SUPPORTED;
 #endif
+#ifdef READGUY_DEV_213B3C
+  static const PROGMEM char NAME_guyDev213B3C[]="2.13寸三色";
+#else 
+  static const char *NAME_guyDev213B3C=NOT_SUPPORTED;
+#endif
+#ifdef READGUY_DEV_266A3C
+  static const PROGMEM char NAME_guyDev266A3C[]="2.66寸三色价签";
+#else 
+  static const char *NAME_guyDev266A3C=NOT_SUPPORTED;
+#endif
+
+#ifdef READGUY_DEV_154C
+  static const PROGMEM char NAME_guyDev154M5CoreInk[]="1.54寸Core.Ink";
+#else 
+  static const char *NAME_guyDev154M5CoreInk=NOT_SUPPORTED;
+#endif
+#ifdef READGUY_DEV_370B
+  static const PROGMEM char NAME_guyDev370LoRes[]="3.7寸低分版本416x240";
+#else 
+  static const char *NAME_guyDev370LoRes=NOT_SUPPORTED;
+#endif
+#ifdef READGUY_DEV_426A
+  static const PROGMEM char NAME_guyDev426HiRes[]="4.26寸GDEQ0426T82高分辨率";
+#else 
+  static const char *NAME_guyDev426HiRes=NOT_SUPPORTED;
+#endif
+#ifdef READGUY_DEV_583A
+  static const PROGMEM char NAME_guyDev583Normal[]="5.83寸黑白/三色价签";
+#else 
+  static const char *NAME_guyDev583Normal=NOT_SUPPORTED;
+#endif
+#ifdef READGUY_DEV_583B
+  static const PROGMEM char NAME_guyDev583HiResBW[]="5.83寸高分辨率版本";
+#else 
+  static const char *NAME_guyDev583HiResBW=NOT_SUPPORTED;
+#endif
+#ifdef READGUY_DEV_750A
+  static const PROGMEM char NAME_guyDev750A3C[]="7.5寸三色价签";
+#else 
+  static const char *NAME_guyDev750A3C=NOT_SUPPORTED;
+#endif
+#ifdef READGUY_DEV_1020A
+  static const PROGMEM char NAME_guyDev1020BW[]="10.2寸黑白";
+#else 
+  static const char *NAME_guyDev1020BW=NOT_SUPPORTED;
+#endif
+  //添加新屏幕型号 add displays here
 const char *ReadguyDriver::epd_drivers_list[EPD_DRIVERS_NUM_MAX]={
   NAME_guyDev154, //此处的顺序必须和 guy_epaper_config.h 里面的一样
   NAME_guyDev154_V2,
@@ -110,7 +157,18 @@ const char *ReadguyDriver::epd_drivers_list[EPD_DRIVERS_NUM_MAX]={
   NAME_guyDev370,
   NAME_guyDev420Hink,
   NAME_guyDev420WF,
-  NAME_epdLcd
+  NAME_epdLcd,
+  NAME_guyDev213B3C,
+  NAME_guyDev266A3C,
+  
+  NAME_guyDev154M5CoreInk,
+  NAME_guyDev370LoRes,
+  NAME_guyDev426HiRes,
+  NAME_guyDev583Normal,
+  NAME_guyDev583HiResBW,
+  NAME_guyDev750A3C,
+  NAME_guyDev1020BW
+  //添加新屏幕型号 add displays here
 };
 //static const char *index_cn_html;
 //static const uint8_t faviconData[1150];
@@ -223,14 +281,18 @@ void ReadguyDriver::handleInitPost(){
     READGUY_sd_ok=0;
 #if defined(ESP8266)
     //Esp8266无视SPI的设定, 固定为唯一的硬件SPI (D5=SCK, D6=MISO, D7=MOSI)
+#ifdef READGUY_ENABLE_SD
     SDFS.end();//关闭SD卡
+#endif
     btnTask.detach();
 #else
+#ifdef READGUY_ENABLE_SD
     SD.end();//关闭SD卡
     if(sd_spi != epd_spi) { //共线时, 不要删除SD
       delete sd_spi;
       sd_spi=nullptr;
     }
+#endif
     vTaskDelete(btn_handle);
 #endif
   }
@@ -516,6 +578,7 @@ void ReadguyDriver::handleFinal(){
     }
     s+=F("<br/><hr/>"); //换行
   }
+#ifdef READGUY_ENABLE_SD
   if(!READGUY_sd_ok)  s+=F("SD卡不可用!!!<br/>");
 #if (defined(ESP8266)) //此函数速度太慢了, 因此删掉不用了
   /*else{
@@ -545,6 +608,7 @@ void ReadguyDriver::handleFinal(){
     s+=(uint32_t)(SD.usedBytes()/1024);
     s+=F("KB.<br/>");
   }
+#endif
 #endif
   s+=F("当前WiFi模式: ");
   s+=(WiFi.getMode()==WIFI_STA)?F("正常联网模式"):F("AP配网模式");

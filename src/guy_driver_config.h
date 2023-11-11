@@ -6,11 +6,16 @@
  * @file guy_driver_config.h
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
  * @brief readguy 基础配置文件. 用户可以根据自己对库的编译需求来修改此文件.
+ * 
  * 如果你希望在程序代码内包含引脚定义, 请参考此文件下方的注释来确定并编译
- * !!!但是这样编译得到的程序不具备跨平台特性.!!!
- * 可以禁用WiFi功能来减少ESP32的flash消耗
- * @version 1.0
- * @date 2023-09-21
+ * 这样就可以只针对你设计的这一个硬件来设定引脚功能.
+ * 关于屏幕配置, 请参考 guy_epaper/guy_epaper_config.h 文件来配置到底哪些屏幕型号的屏幕会被包含进来
+
+ * 可以禁用WiFi功能来减少程序的flash消耗
+
+ * @version 1.1
+ * @date create: 2023-09-21
+ * last modify:  2023-11-11
 
  * @attention
  * Copyright (c) 2022-2023 FriendshipEnder
@@ -61,6 +66,7 @@
 
 /// @brief 使用静态的数据 !!!注意:注释此选项编写的程序是不支持跨平台运行的!!!
 /// @note 相比于禁用WiFi配网功能, 禁用此功能减少的flash并不多, 为保证程序可在不同屏幕上运行, 请不要注释此选项
+//        关闭此选项自动禁用wifi功能. 如需wifi功能需要自己在程序里加.
 #define DYNAMIC_PIN_SETTINGS
 
 /// @brief 启用WIFI配网功能.必须先启用 #define DYNAMIC_PIN_SETTINGS. 此选项对 ESP32xx 会减少大量flash.
@@ -69,11 +75,20 @@
 /// @brief 启用I2C功能. 可用于联网时钟, 温度计, 陀螺仪等外设. 目前暂不支持库内使用类似函数. 仅可以提供引脚定义
 #define READGUY_ENABLE_I2C
 
+/** @brief (即将推出) 启用SD卡功能. 开启此功能将会使用内置SD卡管理功能. 关闭后仅可保存SD卡用到的引脚.
+    @note 会破坏兼容性. 若没有启用通用的SD卡驱动程序, 那么那些跨屏台编译的程序将无法用guyFS读取到SD卡.
+    若用户程序希望能从外部加载SD卡, 可以使用getSdMiso()等函数获取SD卡的Miso等引脚, 再由用户程序初始化SD卡. */
+#define READGUY_ENABLE_SD
+
 /// @brief 使用LittleFS作为片上文件系统, 注释此行则用SPIFFS(功能少, 不好用)
 #define READGUY_USE_LITTLEFS 1
 
 /// @brief ESP32按键服务任务的栈空间大小, 不建议普通用户更改. 默认值1024字节. 小于此大小会使程序栈溢出.
+#ifdef CONFIG_IDF_TARGET_ESP32S3
+#define BTN_LOOPTASK_STACK 1280
+#else
 #define BTN_LOOPTASK_STACK 1024
+#endif
 
 /// @brief ESP32按键服务任务运行在哪个核心. 通常运行在核心0上.
 #define BTN_LOOPTASK_CORE_ID 0

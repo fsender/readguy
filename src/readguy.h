@@ -49,7 +49,8 @@
 #ifdef READGUY_DEV_213A
 #include "guy_epaper/guy_213a/guy_213a.h"
 #endif
-#if (defined(READGUY_DEV_213B) || defined(READGUY_DEV_266A))
+#if (defined(READGUY_DEV_213B) || defined(READGUY_DEV_213B3C) \
+  || defined(READGUY_DEV_266A) || defined(READGUY_DEV_266A3C))
 #include "guy_epaper/guy_213b_266a/guy_213b_266a.h"
 #endif
 #ifdef READGUY_DEV_370A
@@ -65,6 +66,29 @@
 #include "guy_epaper/lcdDebug/lcdDebug.h"
 #endif
 
+#ifdef READGUY_DEV_154C
+#include "guy_epaper/guy_154C/guy_154C.h"
+#endif
+#ifdef READGUY_DEV_370B
+#include "guy_epaper/guy_370B/guy_370B.h"
+#endif
+#ifdef READGUY_DEV_426A
+#include "guy_epaper/guy_426A/guy_426A.h"
+#endif
+#ifdef READGUY_DEV_583A
+#include "guy_epaper/guy_583A/guy_583A.h"
+#endif
+#ifdef READGUY_DEV_583B
+#include "guy_epaper/guy_583B/guy_583B.h"
+#endif
+#ifdef READGUY_DEV_750A
+#include "guy_epaper/guy_750A/guy_750A.h"
+#endif
+#ifdef READGUY_DEV_1020A
+#include "guy_epaper/guy_1020A/guy_1020A.h"
+#endif
+  //添加新屏幕型号 add displays here
+
 #include "guy_button.h" //改自Button2精简而来
 #include "guy_version.h"
 #include "guy_driver_config.h" //config
@@ -77,28 +101,28 @@
 #endif
 
 #if defined(ESP8266) //for ESP8266
-#ifdef DYNAMIC_PIN_SETTINGS
-#include <EEPROM.h> //ESP32需要NVS才可以读取引脚信息
-#endif
+#include <EEPROM.h> //ESP32需要NVS才可以读取引脚信息,
 #ifdef READGUY_ESP_ENABLE_WIFI
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include "ESP8266HTTPUpdateServer.h"
 #endif
+#ifdef READGUY_ENABLE_SD
 #include <SDFS.h>
+#endif
 #include <Ticker.h>
 #else //for ESP32
-#ifdef DYNAMIC_PIN_SETTINGS
 #include <Preferences.h> //ESP32需要NVS才可以读取引脚信息
-#endif
 #ifdef READGUY_ESP_ENABLE_WIFI
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
 #include "HTTPUpdateServer.h"
 #endif
+#ifdef READGUY_ENABLE_SD
 #include <SD.h>
+#endif
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #endif
@@ -213,13 +237,13 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     void invertDisplay();
     /// @brief 进入EPD的低功耗模式
     void sleepEPD(void);
+#ifdef READGUY_ESP_ENABLE_WIFI
     /// @brief ap配网设置页面
     typedef struct {
       String linkname; 
       String event;    //链接名称 事件URI
       std::function<void(ReadguyWebServer*)> func; //触发时执行的函数
     } serveFunc;
-#ifdef READGUY_ESP_ENABLE_WIFI
     /// @brief 初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
     void ap_setup();
     /// @brief 初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
@@ -227,6 +251,12 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     bool server_loop();
     void server_end();
 #else
+    /// @brief ap配网设置页面
+    typedef struct {
+      String linkname; 
+      String event;    //链接名称 事件URI
+      std::function<void(void*)> func; //触发时执行的函数
+    } serveFunc;
     /// @brief 初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
     void ap_setup(){}
     /// @brief 初始化服务器模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
@@ -239,7 +269,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     /** @brief 初始化屏幕, 设置驱动代号, 引脚排列顺序. 过程会检验引脚可用性.
      *  @param g_width, g_height 显示区域的宽度和高度. 为0表示直接使用屏幕的宽度和高度
      *  @note 这两个参数转专为指定分辨率的程序画面设计, 其他分辨率的画面会自动拉伸. [1.2新增] */
-    void setEpdDriver(bool initepd = 1/* ,int g_width = 0,int g_height = 0 */);
+    void setEpdDriver(bool initepd = 1, bool initGFX = 1);
     /** @brief 初始化SD卡, 设置驱动代号, 引脚排列顺序. 过程会检验引脚可用性.
      *  @return SD卡初始化成功与否 */
     bool setSDcardDriver();
@@ -250,7 +280,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     bool SDinside(bool check=true) { return check?setSDcardDriver():READGUY_sd_ok; };
     /// @brief 检查按钮. 当配置未完成时,按钮不可用, 返回0.
     uint8_t getBtn() { return (READGUY_cali==127)?getBtn_impl():0; }
-    /// @brief 根据按钮ID来检查按钮. 注意这里如果按下返回0, 没按下或者按钮无效返回1
+    /// @brief [此函数已弃用 非常不建议使用] 根据按钮ID来检查按钮. 注意这里如果按下返回0, 没按下或者按钮无效返回1
     //uint8_t getBtn(unsigned int btnID){return btnID<getButtonsCount()?(!(btn_rd[0].isPressedRaw())):1;}
     /** @brief 返回可用的文件系统. 当SD卡可用时, 返回SD卡. 否则根据情况返回最近的可用文件系统
      *  @param initSD 2:总是重新初始化SD卡; 1:若SD卡不可用则初始化; 0:SD卡不可用则返回LittleFS. */
@@ -263,14 +293,15 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     static const char projname[8];
     static const char tagname[7];
     //uint8_t config_wifi=0; //是否强行在初始化期间设置WiFi.
-#ifdef DYNAMIC_PIN_SETTINGS//数据是否已经校准
-    int8_t config_data[22];
-    char randomch[4]; //校验用字符串
     void nvs_init();  //初始化持久存储器.
     void nvs_deinit();//保存持久存储器的内容
     bool nvs_read();  //从持久存储器读取, 返回是否读取成功
     void nvs_write(); //写入到持久存储器
+#ifdef DYNAMIC_PIN_SETTINGS//数据是否已经校准
+    int8_t config_data[22];
+    char randomch[4]; //校验用字符串
 #else
+    static const int8_t config_data[22];
     int8_t READGUY_sd_ok = 0;
     int8_t READGUY_cali = 0;
     int8_t READGUY_buttons = 0;  //按钮个数, 0-3都有可能
@@ -289,10 +320,8 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
   //对于esp8266, 需要注册到ticker
     Ticker btnTask;
 #else
-#ifdef DYNAMIC_PIN_SETTINGS
     //NVS数据操作函数, 无NVS的使用EEProm的最后几个字节块
     Preferences nvsData;
-#endif
     static SPIClass *sd_spi;
     static SPIClass *epd_spi;
     static TaskHandle_t btn_handle;
@@ -356,30 +385,30 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
 #endif
     }
   public: //增加了一些返回系统状态变量的函数, 它们是静态的, 而且不会对程序造成任何影响.
-    constexpr int getShareSpi() const { return config_data[1]; }
-    constexpr int getEpdType () const { return config_data[2]; } // 对应的epd驱动程序代号, -1为未指定
+    constexpr int getShareSpi() const { return READGUY_shareSpi; }
+    constexpr int getEpdType () const { return READGUY_epd_type; } // 对应的epd驱动程序代号, -1为未指定
         //显示驱动部分, 显示默认使用vspi (vspi也是默认SPI库的通道)
-    constexpr int getEpdMosi () const { return config_data[3]; } // 目标显示器的 MOSI 引脚
-    constexpr int getEpdSclk () const { return config_data[4]; } // 目标显示器的 SCLK 引脚
-    constexpr int getEpdCs   () const { return config_data[5]; } // 目标显示器的 CS   引脚
-    constexpr int getEpdDc   () const { return config_data[6]; } // 目标显示器的 DC   引脚
-    constexpr int getEpdRst  () const { return config_data[7]; } // 目标显示器的 RST  引脚
-    constexpr int getEpdBusy () const { return config_data[8]; } // 目标显示器的 BUSY 引脚
+    constexpr int getEpdMosi () const { return READGUY_epd_mosi; } // 目标显示器的 MOSI 引脚
+    constexpr int getEpdSclk () const { return READGUY_epd_sclk; } // 目标显示器的 SCLK 引脚
+    constexpr int getEpdCs   () const { return READGUY_epd_cs; } // 目标显示器的 CS   引脚
+    constexpr int getEpdDc   () const { return READGUY_epd_dc; } // 目标显示器的 DC   引脚
+    constexpr int getEpdRst  () const { return READGUY_epd_rst; } // 目标显示器的 RST  引脚
+    constexpr int getEpdBusy () const { return READGUY_epd_busy; } // 目标显示器的 BUSY 引脚
         //sd卡驱动部分, 默认使用hspi (sd卡建议用hspi)
-    constexpr int getSdMiso  () const { return config_data[9]; } // 目标sd卡的 MISO 引脚, sd_share_spi == 1 时无效
-    constexpr int getSdMosi  () const { return config_data[10]; }// 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
-    constexpr int getSdSclk  () const { return config_data[11]; }// 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
-    constexpr int getSdCs    () const { return config_data[12]; }// 目标sd卡的 CS   引脚.
-    constexpr int getI2cSda  () const { return config_data[13]; }// 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
-    constexpr int getI2cScl  () const { return config_data[14]; }// 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
+    constexpr int getSdMiso  () const { return READGUY_sd_miso; } // 目标sd卡的 MISO 引脚, sd_share_spi == 1 时无效
+    constexpr int getSdMosi  () const { return READGUY_sd_mosi; }// 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
+    constexpr int getSdSclk  () const { return READGUY_sd_sclk; }// 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
+    constexpr int getSdCs    () const { return READGUY_sd_cs; }// 目标sd卡的CS引脚. 对ESP32S3, 返回127代表使用SDMMC
+    constexpr int getI2cSda  () const { return READGUY_i2c_sda; }// 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
+    constexpr int getI2cScl  () const { return READGUY_i2c_scl; }// 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
         //按键驱动部分, 为负代表高触发, 否则低触发,
         //注意, 这里的io编号是加1的, 即 1或-1 代表 gpio0 的低触发/高触发
-    constexpr int getBtn1Pin () const { return config_data[15]; } 
-    constexpr int getBtn2Pin () const { return config_data[16]; } 
-    constexpr int getBtn3Pin () const { return config_data[17]; } 
-    constexpr int getBlPin   () const { return config_data[18]; } //前置光接口引脚IO
-    constexpr int getRtcType () const { return config_data[19]; } //使用的RTC型号(待定, 还没用上)
-    constexpr int getButtonsCount() const { return config_data[21]; } //按钮个数, 0-3都有可能
+    constexpr int getBtn1Pin () const { return READGUY_btn1; } 
+    constexpr int getBtn2Pin () const { return READGUY_btn2; } 
+    constexpr int getBtn3Pin () const { return READGUY_btn3; } 
+    constexpr int getBlPin   () const { return READGUY_bl_pin; } //前置光接口引脚IO
+    constexpr int getRtcType () const { return READGUY_rtc_type; } //使用的RTC型号(待定, 还没用上)
+    constexpr int getButtonsCount() const { return READGUY_buttons; } //按钮个数, 0-3都有可能
     //constexpr int memWidth   () const { return guy_width ;  } //返回显存宽度(不是画幅宽度),不会随着画布旋转改变
     //constexpr int memHeight  () const { return guy_height ; } //返回显存高度(不是画幅高度),不会随着画布旋转改变
     int drvWidth () const { return READGUY_cali==127?guy_dev->drv_width():0;  } //返回显示屏硬件宽度(不是画幅宽度)
