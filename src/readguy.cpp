@@ -79,7 +79,7 @@ ReadguyDriver::ReadguyDriver(){
   READGUY_sd_ok = 0; //初始默认SD卡未成功初始化
   READGUY_buttons = 0; //初始情况下没有按钮
 } //WiFiSet: 是否保持AP服务器一直处于打开状态
-uint8_t ReadguyDriver::init(uint8_t WiFiSet, bool initepd){
+uint8_t ReadguyDriver::init(uint8_t WiFiSet, bool initepd, bool initSD){
   if(READGUY_cali==127) //已经初始化过了一次了, 为了防止里面一些volatile的东西出现问题....还是退出吧
     return 0;
 #ifdef DYNAMIC_PIN_SETTINGS
@@ -109,7 +109,7 @@ uint8_t ReadguyDriver::init(uint8_t WiFiSet, bool initepd){
     else if(WiFiSet==1) ap_setup();
     if(checkEpdDriver()!=127) setEpdDriver(initepd/* ,g_width,g_height */);  //初始化屏幕
     else for(;;); //此处可能添加程序rollback等功能操作(比如返回加载上一个程序)
-    setSDcardDriver();
+    if(initSD) setSDcardDriver();
     setButtonDriver();
   }
 #endif
@@ -118,7 +118,7 @@ uint8_t ReadguyDriver::init(uint8_t WiFiSet, bool initepd){
   nvs_init();
   if(checkEpdDriver()!=127) setEpdDriver(initepd/* ,g_width,g_height */);  //初始化屏幕
   else for(;;); //此处可能添加程序rollback等功能操作(比如返回加载上一个程序)
-  setSDcardDriver();
+  if(initSD) setSDcardDriver();
   setButtonDriver();
   if(!nvs_read()){
     nvs_write(); //全部成功之后, 写入引脚信息到NVS.

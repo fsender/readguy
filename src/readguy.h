@@ -181,7 +181,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
      *  @param initepd 是否初始化墨水屏. 初始化后的首次刷屏必为慢刷. 如果是不断电复位, 可以不初始化墨水屏直接刷屏
      *  @return SD卡是否就绪
      */
-    uint8_t init(uint8_t WiFiSet = 0, bool initepd = 1);
+    uint8_t init(uint8_t WiFiSet = 0, bool initepd = 1, bool initSD = 1);
     /// @brief 设置显示亮度
     void setBright(int d);
     /// @brief 返回显示亮度
