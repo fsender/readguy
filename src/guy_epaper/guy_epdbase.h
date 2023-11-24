@@ -50,7 +50,7 @@ protected:
     uint8_t in_trans=0;
     uint8_t _quality=2;  //灰度显示品质 0(默认)-高品质 1-低品质 部分屏幕支持高品质的连续刷灰度.
   #ifdef MEPD_DEBUG_WAVE
-    uint16_t dat_combo = 0;   //dc引脚状态 0 command, 1 data
+    int dat_combo = 0;   //dc引脚状态 0 command, 1 data
   #endif
     uint16_t *readBuff;// = new uint16_t[spr.width()];
     uint8_t *writeBuff;// = new uint8_t[w];

@@ -664,7 +664,7 @@ uint8_t ReadguyDriver::getBtn_impl(){ //按钮不可用, 返回0.
       if(res1 && millis()-last >= btn_rd[1].long_press_ms && (!btn_rd[1].isPressedRaw()))
         res4 = (res1 == 1)?1:2;      //左键点按-向下翻页
       if(res2) {
-        if((btn_rd[0].isPressedRaw()<<1)) res4 |= 3;
+        if(btn_rd[0].isPressedRaw()) res4 |= 3; //避免GCC警告(我常年喜欢-Werror=all
         else if(res2 == 1) res4 |= 4; //右键点按-确定
         else if(res2 == 4) res4 |= 8; //右键长按-返回
         last=millis();

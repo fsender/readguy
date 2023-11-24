@@ -41,9 +41,9 @@
 //另外, 在提交新版本之前, 不要忘记在github上创建release, 否则Arduino IDE会读不到
 #define READGUY_V_MAJOR 1
 #define READGUY_V_MINOR 3
-#define READGUY_V_PATCH 3
+#define READGUY_V_PATCH 4
 #define READGUY_VERSION_VAL (READGUY_V_MAJOR*1000+READGUY_V_MINOR*100+READGUY_V_PATCH*10)
-#define READGUY_VERSION "1.3.3"
+#define READGUY_VERSION "1.3.4"
 
 #ifdef ESP8266
 #define _READGUY_PLATFORM "ESP8266"

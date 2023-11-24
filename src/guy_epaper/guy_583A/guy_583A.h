@@ -36,13 +36,17 @@
 #define _GUY_EPD583A_H_FILE
 
 namespace guydev_583A{
-constexpr int GUY_D_WIDTH       =200;  //驱动屏幕宽度
-constexpr int GUY_D_HEIGHT      =200;  //驱动屏幕高度
-constexpr int slowRefTime       =2000; //驱动屏幕慢刷时间, 单位毫秒
-constexpr int fastRefTime       =500;  //驱动屏幕快刷时间, 单位毫秒
+constexpr int GUY_D_WIDTH       =600;  //驱动屏幕宽度
+constexpr int GUY_D_HEIGHT      =448;  //驱动屏幕高度
+constexpr int slowRefTime       =1600; //驱动屏幕慢刷时间, 单位毫秒
+constexpr int fastRefTime       =560;  //驱动屏幕快刷时间, 单位毫秒
 
 class drv : public readguyEpdBase {
 public:
+#ifdef READGUY_583A_DUAL_BUFFER
+  drv();
+  virtual ~drv();
+#endif
   int drv_ID() const { return READGUY_DEV_583A; }
   void drv_init(); //初始化屏幕
   void drv_fullpart(bool part); //切换慢刷/快刷功能
@@ -52,11 +56,36 @@ public:
   //int drv_panelwidth() const { return GUY_D_WIDTH;  }; //返回缓存的数据宽度
   int drv_height() const{ return GUY_D_HEIGHT; }; //返回显示区域高度
   void drv_setDepth(uint8_t i); //设置显示颜色深度
-  int drv_supportGreyscaling() const { return 16; }
+  int drv_supportGreyscaling() const { return (_quality&1)?16:-16; } //暂不支持灰度功能移植
+  void drv_draw16grey_step(std::function<uint8_t(int)> f, int step);
 private:
   uint8_t epd_PowerOn=1;  //是否上电. 睡眠则设为0
   uint8_t epdFull=0;      //是partical模式/快速刷新模式 0快刷, 1慢刷
   uint8_t iLut=15;        //颜色深度
+  uint8_t greyscalingHighQuality = 0;
+  static const unsigned char *luts[10];
+  static const unsigned char *luts_fast[10];
+  static const unsigned char lut_20_LUTC[];
+  static const unsigned char lut_20_LUTCFAST[];
+  static const unsigned char lut_21_LUTB[];
+  static const unsigned char lut_21_LUTBFAST[];
+  static const unsigned char lut_22_LUTW[];
+  static const unsigned char lut_22_LUTWFAST[];
+  static const unsigned char lut_23_LUTG1[];
+  static const unsigned char lut_24_LUTG2[];
+  static const unsigned char lut_25_LUTR0[];
+  static const unsigned char lut_26_LUTR1[];
+  static const unsigned char lut_27_LUTR2[];
+  static const unsigned char lut_28_LUTR3[];
+  static const unsigned char lut_29_LUTXON[];
+  static const unsigned char customGrey[];
+  void sendLut(int lutid);
+  void epd_init();
+  void epd_sendZoneInfo();
+  void epd_sendWriter(std::function<uint8_t(int)> f);
+#ifdef READGUY_583A_DUAL_BUFFER
+  uint8_t *buf_2nd=nullptr; //second Buffer for luts
+#endif
 };
 } 
 #endif /* END OF FILE. ReadGuy project.
