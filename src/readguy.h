@@ -207,11 +207,11 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
      */
     void display(std::function<uint8_t(int)> f, uint8_t part);
     /// @brief 显示图片, 使用抖动算法. 可以用省内存的方法显示, 可以缩放到指定的宽度和高度
-    void drawImage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw=0, uint16_t zoomh=0){
+    void drawImage(LGFX_Sprite &spr,int32_t x,int32_t y,int32_t zoomw=0, int32_t zoomh=0){
       if(READGUY_cali==127) drawImage(*this,spr,x,y,zoomw,zoomh);
     }
     /// @brief 显示图片, 将图片(任意颜色格式)显示到一个黑白色的sprite(必须是黑白二值型)上 (未经测试)
-    void drawImage(LGFX_Sprite &base,LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw=0,uint16_t zoomh=0);
+    void drawImage(LGFX_Sprite &base,LGFX_Sprite &spr,int32_t x,int32_t y,int32_t zoomw=0,int32_t zoomh=0);
     /// @brief 设置显示对比度(灰度)
     void setDepth(uint8_t d);
     /** @brief 返回目标屏幕是否支持16级灰度 返回非0代表支持.
@@ -223,7 +223,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
      *           2-关闭连续刷屏 关闭16阶灰度抖动  3-开启连续刷屏 关闭16阶灰度抖动 */
     void setGreyQuality(uint8_t q) { if(READGUY_cali==127) guy_dev->setGreyQuality(q); }
     /// @brief 显示灰度图片,如果支持,否则就不显示灰度图片了. 可以用省内存的方法显示
-    void draw16grey(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw=0,uint16_t zoomh=0);
+    void draw16grey(LGFX_Sprite &spr,int32_t x,int32_t y,int32_t zoomw=0,int32_t zoomh=0);
     /** @brief 按照自定义分步显示灰度图片,如果支持,否则就不显示灰度图片了. 可以用省内存的方法显示
      *  @param step 步骤代号. 从1开始到15,依次调用此函数来自定义的灰度显示显存内容. 没有0和16.
      *  @note 必须按照 "慢刷全屏->绘图->设置参数1->绘图->设置参数2... 调用15次 来完成一次自定义灰度刷屏
@@ -427,10 +427,10 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     void implBeginTransfer() { guy_dev->BeginTransfer(); } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!
     void implEndTransfer()   { guy_dev->EndTransfer();   } //此函数用于开启SPI传输, 只能在自定义刷屏函数中使用!!
     /// @brief 分阶段显示图片, 使用抖动算法. 更加的省内存.目前函数
-    void drawImageStage(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint8_t stage,uint8_t totalstage,
-      uint16_t zoomw=0,uint16_t zoomh=0){ drawImageStage(*this,spr,x,y,stage,totalstage,zoomw,zoomh); }
-    void drawImageStage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,
-      uint8_t stage,uint8_t totalstage,uint16_t zoomw=0,uint16_t zoomh=0);
+    void drawImageStage(LGFX_Sprite &spr,int32_t x,int32_t y,uint8_t stage,uint8_t totalstage,
+      int32_t zoomw=0,int32_t zoomh=0){ drawImageStage(*this,spr,x,y,stage,totalstage,zoomw,zoomh); }
+    void drawImageStage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,int32_t x,int32_t y,
+      uint8_t stage,uint8_t totalstage,int32_t zoomw=0,int32_t zoomh=0);
 };
 #endif /* END OF FILE. ReadGuy project.
 Copyright (C) 2023 FriendshipEnder. */

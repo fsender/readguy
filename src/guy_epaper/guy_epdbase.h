@@ -48,7 +48,7 @@ protected:
     int8_t CS_PIN  ;
     int8_t BUSY_PIN;
     uint8_t in_trans=0;
-    uint8_t _quality=2;  //灰度显示品质 0(默认)-高品质 1-低品质 部分屏幕支持高品质的连续刷灰度.
+    uint8_t _quality=2;//灰度显示品质 默认2 0,2-高品质 1,3-低品质高兼容性. 0,1使用bayer灰度二值表 2,3使用floyd算法
   #ifdef MEPD_DEBUG_WAVE
     int dat_combo = 0;   //dc引脚状态 0 command, 1 data
   #endif
@@ -88,17 +88,19 @@ public:
     virtual int  drv_height()const=0; //返回显示区域高度, 即使旋转了也不能影响此函数输出
     
     virtual int drv_supportGreyscaling() const { return 0; }
-    virtual void drv_setDepth(uint8_t i){} //设置显示颜色深度, 不支持的话什么都不做
+    virtual void drv_setDepth(uint8_t i){ (void)i; } //设置显示颜色深度, 不支持的话什么都不做
     /** @brief 获取某一像素颜色, 并转化为256阶灰度
      *  @param x, y 坐标
      *  @param gamma_on 是否对灰度值进行gamma校正(速度慢)
      *  @return uint32_t 颜色的灰度值
      */
     IRAM_ATTR static int greysc(int c){return(((c>>3)&0x1F)*79+(((c<<3)+(c>>13))&0x3F)*76+((c>>8)&0x1F)*30)>>5;}
-    void drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,int o=0,
-      uint16_t fw=0, uint16_t fh=0); //分步完成灰度刷新
-    void drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,
-      uint16_t fw=0, uint16_t fh=0);//省内存方式
+    /// @brief 显示sprite图像, 使用floyd算法
+    /// @param o 无视缩放优化, 0~3:分步的三种渲染模式, 0完整 1开始 2中间 3结束
+    void drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,int32_t x,int32_t y,int o=0,
+      int32_t fw0=0, int32_t fh=0); //分步完成灰度刷新
+    void drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,int32_t x,int32_t y,
+      int32_t fw0=0, int32_t fh=0);//省内存方式
     void drv_draw16grey_step(const uint8_t *buf, int step){ //分步完成灰度刷新
       drv_draw16grey_step([&](int n)->uint8_t{return buf[n];},step);
     }

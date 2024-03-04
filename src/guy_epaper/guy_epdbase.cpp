@@ -160,8 +160,8 @@ void readguyEpdBase::Reset(uint32_t minTime)
 }
 //void readguyEpdBase::drv_draw16grey(const uint8_t *d16bit){        //不支持的话什么都不做
 
-void readguyEpdBase::drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,int o,
-  uint16_t fw, uint16_t fh){
+void readguyEpdBase::drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,int32_t x,int32_t y,int o,
+  int32_t fw0, int32_t fh){
   static const PROGMEM uint8_t bayer_tab [64]={
      0, 32,  8, 40,  2, 34, 10, 42,
     48, 16, 56, 24, 50, 18, 58, 26,
@@ -172,9 +172,11 @@ void readguyEpdBase::drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_
     15, 47,  7, 39, 13, 45,  5, 37,
     63, 31, 55, 23, 61, 29, 53, 21
   };
-  if(!fw) fw=spr.width();
-  if(!fh) fh=spr.height();
-  if((!fw) || (!fh)) return;
+  if(!fw0) fw0=spr.width();
+  if(!fh)  fh=spr.height();
+  if((!fw0) || (!fh)) return;
+  int32_t fw=(fw0>0?std::min(fw0,sprbase.width()):-fw0);
+  fw0=std::abs(fw0); //无视缩放优化, 0~3:常规的三种渲染模式, 4~7: 无视缩放优化
   if(o==0 || o==1){
     readBuff = new uint16_t[spr.width()];
     floyd_tab[0] = new int16_t [fw];
@@ -188,7 +190,7 @@ void readguyEpdBase::drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_
     spr.readRect(0,(i-y)*spr.height()/fh,spr.width(),1,readBuff);
     if(_quality&2){
     for(int32_t j=0;j<fw;j++){
-      int gv=greysc(readBuff[j*spr.width()/fw]);
+      int gv=greysc(readBuff[j*spr.width()/fw0]);
       int32_t flodelta = floyd_tab[i&1][j]+(int32_t)((gv<<8)|gv);
       if(flodelta>=0x8000) { 
         //spr.drawPixel(j,i,1);
@@ -221,7 +223,7 @@ void readguyEpdBase::drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_
         buff8bit=0;
         for(uint_fast8_t b=0;b<8;b++)
           buff8bit |= ((pgm_read_byte(bayer_tab+((b<<3)|(i&7)))<<2)+2
-            <greysc(readBuff[((j<<3)+b)*spr.width()/fw]))<<(7-b);
+            <greysc(readBuff[((j<<3)+b)*spr.width()/fw0]))<<(7-b);
         writeBuff[j]=buff8bit;
       }
     }
@@ -236,12 +238,14 @@ void readguyEpdBase::drv_drawImage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_
   }
 }
 //不支持的话使用单色抖动刷屏
-void readguyEpdBase::drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,
-  uint16_t fw, uint16_t fh){
+void readguyEpdBase::drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,int32_t x,int32_t y,
+  int32_t fw0, int32_t fh){
   //Serial.println("drv_draw16grey fx");
-  if(!fw) fw=spr.width();
-  if(!fh) fh=spr.height();
-  if((!fw) || (!fh)) return;
+  if(!fw0) fw0=spr.width();
+  if(!fh)  fh=spr.height();
+  if((!fw0) || (!fh)) return;
+  int32_t fw=(fw0>0?std::min(fw0,sprbase.width()):-fw0);
+  fw0=std::abs(fw0); //无视缩放优化, 0~3:常规的三种渲染模式, 4~7: 无视缩放优化
   readBuff = new uint16_t[spr.width()];
   if(_quality&2){
     floyd_tab[0] = new int16_t [fw];
@@ -263,7 +267,7 @@ void readguyEpdBase::drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16
         //for(uint_fast8_t b=0;b<8;b++){
         uint_fast8_t cg=0;
         if(_quality&2){
-          int gv=greysc(readBuff[j*spr.width()/fw]);
+          int gv=greysc(readBuff[j*spr.width()/fw0]);
           int32_t fd = floyd_tab[i&1][j]+((gv<<8)|gv);
           while(fd>=0x800) { 
             cg++;
@@ -275,8 +279,8 @@ void readguyEpdBase::drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16
                       { floyd_tab[!(i&1)][j  ] += (fd*5)>>4; }
           if(j!=fw-1) { floyd_tab[!(i&1)][j+1] += (fd  )>>4; }
         }
-        else{ cg=greysc(readBuff[j*spr.width()/fw])>>4; }
-          //uint_fast8_t cg=greysc(readBuff[j*spr.width()/fw])>>4;
+        else{ cg=greysc(readBuff[j*spr.width()/fw0])>>4; }
+          //uint_fast8_t cg=greysc(readBuff[j*spr.width()/fw0])>>4;
           if(negativeOrder)
             buff8bit |= (cg<k)<<((~j)&7);
           else{
@@ -288,7 +292,7 @@ void readguyEpdBase::drv_draw16grey(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16
             buff8bit=0;
           }
         //}
-        //sprbase.drawPixel(x+j,i,(greysc(readBuff[j*spr.width()/fw])/16)==(15-k));
+        //sprbase.drawPixel(x+j,i,(greysc(readBuff[j*spr.width()/fw0])/16)==(15-k));
       }
       if(_quality&2) for(int floi=0;floi<fw;floi++) floyd_tab[i&1][floi]=0;
       sprbase.drawBitmap(x,i,writeBuff,fw,1,1,0);

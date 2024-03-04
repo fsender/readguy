@@ -6,8 +6,9 @@
  * 
  * @file ex03_buttons.ino
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
- * @version 1.0
- * @date 2023-10-20
+ * @version 1.1 增加了新的手势功能
+ * 
+ * @date created: 2023-10-20 last modify: 2024-02-25
  * @brief ReadGuy 按键功能演示. ReadGuy自带的按键驱动程序是非常好用的
 
  * @attention
@@ -63,6 +64,11 @@ void loop(){
         if(c==1) guy.println("key double clicked!");
         else if(c==2) guy.println("Left key long pressed!");
         else if(c==3) guy.println("Right key clicked!");
+      break;
+      case 3:
+        if(c==1) guy.println("key triple clicked!");
+        else if(c==2) guy.println("Right clicked at left pressing!");
+        else if(c==3) guy.println("Centre key double clicked!");
       break;
       case 4:
         if(c==1) guy.println("key long pressed!");

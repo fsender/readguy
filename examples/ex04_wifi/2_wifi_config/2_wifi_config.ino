@@ -6,10 +6,13 @@
  * 
  * @file 2_wifi_config.ino
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
- * @version 1.0
- * @date 2023-10-14
+ * @version 1.1
+ * @date create: 2023-10-14 last modify: 2024-02-26
+ * @note 本版本主要更新了NTP对时机制, 以及扫描wifi时可以在屏幕上显示到底扫描了多少wifi
  * @brief ReadGuy配网服务器 配置并连接附近的WiFi网络演示程序.
  编译烧录后, 本程序将使用AP方式配网并在连接到网络时访问NTP服务器来在墨水屏上显示时间.
+ *** 推荐文章   解决2038千年虫: (本程序未使用该文章内容)
+ *** https://blog.csdn.net/qdlyd/article/details/131199628
  同时开启在STA上的服务器, 供这个WiFi上的用户访问此墨水屏阅读器.
 
 // 注意, 为了避免此项目占用的flash空间过大, 故库内中不再提供配网的相关功能函数.
@@ -40,6 +43,7 @@
 
 #include <Arduino.h> //arduino功能基础库. 在platformIO平台上此语句不可或缺
 #include "readguy.h" //包含readguy_driver 基础驱动库
+#include <lwip/apps/sntp.h>
 
 ReadguyDriver guy;//新建一个readguy对象, 用于显示驱动.
 
@@ -48,7 +52,9 @@ typedef ReadguyDriver::serveFunc         event_t ; //存储一个WiFi功能事�
 
 void f1(server_t sv); //服务器响应回调函数. 当启动AP配网服务器时, 这些函数将会被调用
 void f2(server_t sv);
-time_t getNTPTime();  //NTP获取时间的函数
+
+/// @brief NTP获取时间的函数, 必须联网才能调用
+time_t getNTPTime();
 
 int conf_status = 0;  //标记WiFi配网状态: 当此值为1时, 说明配网程序收到了WiFi SSID和密码信息, 尝试连接.
                       //此变量为2 说明配网成功了. 连接到了WiFi并显示当前时间.
@@ -81,8 +87,8 @@ void setup(){
 
     scanres = WiFi.scanNetworks(); //开始扫描网络
     
-    Serial.println("[readguy] WiFi Scan OK."); //关闭服务器, 尝试连接, 连接成功之后将会在屏幕上显示
-    guy.println("WiFi Scan OK.");    //连接失败则会重新进入循环
+    Serial.printf("[readguy] WiFi Scan %d OK.\n",scanres); //关闭服务器, 尝试连接, 连接成功之后将会在屏幕上显示
+    guy.printf("WiFi Scan %d OK.\n",scanres);    //连接失败则会重新进入循环
     guy.display();
 
     IPAddress local_IP(192,168,4,1); //设置本地AP的IP地址, 网关和子网掩码.
@@ -135,9 +141,15 @@ void setup(){
   Serial.println("[readguy] Getting NTP time..."); //连接成功之后尝试获取NTP时间
   guy.display();
 
-  time_t now = getNTPTime(); //下方的函数演示了如何使用NTP来对时
-  guy.println(ctime(&now));
-  Serial.println(ctime(&now));
+  time_t now = getNTPTime();        //下方的函数演示了如何使用NTP来对时. 此函数必须连接上wifi才能调用
+  now=time(nullptr);                //通过Unix API获取时间
+  struct tm now_tm;
+  gmtime_r(&now,&now_tm);           //转换为GMT时间
+  guy.println(asctime(&now_tm));
+  Serial.println(asctime(&now_tm));
+  localtime_r(&now,&now_tm);        //转换为本地时间(包含了时区数据的)
+  guy.println(asctime(&now_tm));
+  Serial.println(asctime(&now_tm));
   guy.display();
 
   guy.server_setup("现在是联网的STA模式."); //如果没有调用server_end函数 连续调用server_setup将自动结束之前的服务器
@@ -216,7 +228,6 @@ void f2(server_t sv){
     PSTR("<html><body><meta charset=\"utf-8\">配置失败,缺少信息</body></html>"));
 }
 
-
     /*----------------- NTP code ------------------*/
 WiFiUDP udp;
 uint8_t packetBuffer[48];
@@ -271,25 +282,32 @@ time_t get_ntp_time_impl(uint8_t _server)
       secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
       secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
       secsSince1900 |= (unsigned long)packetBuffer[43];
-      return secsSince1900 - 2208988800UL + timeZone * 3600;
+      return secsSince1900 - 2208988800UL; // + timeZone * 3600; //时区数据 舍弃即可
     }
   }
   Serial.println("No NTP Response :-(");
   return 0; // return 0 if unable to get the time
 }
-
 time_t getNTPTime(){
   time_t _now = 0;
   if(!WiFi.isConnected()) return 0;
   udp.begin(localPort);
-    Serial.print("Local port: ");
-    Serial.println(localPort);
-    for(int i=0;i<4;i++){//最多尝试10次对时请求
-        _now=get_ntp_time_impl(i);
-        if(_now) break; //成功后立即退出
-        yield();
+  Serial.print("Local port: ");
+  Serial.println(localPort);
+  for(int i=0;i<4;i++){//最多尝试10次对时请求
+      _now=get_ntp_time_impl(i);
+      if(_now) break; //成功后立即退出
+      yield();
+  }
+  if(_now){
+    if(time(nullptr) < 1577836800){ //时区未设置 (比较时间为2020年1月1日 00:00:00)
+      setenv("TZ", "CST-8", 1); //设置时区变量 (当前设置为北京时间)
+      tzset();
     }
-    return _now;
+    timeval tm_now={_now, 0};
+    settimeofday(&tm_now,nullptr);
+  }
+  return _now;
 }
 
 /* END OF FILE. ReadGuy project.

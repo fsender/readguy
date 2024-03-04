@@ -40,17 +40,24 @@ namespace guydev_template{
 void drv::drv_init(){ //初始化屏幕
   //add driver code...
 }
-void drv::drv_fullpart(bool part){ //初始化慢刷功能
+void drv::drv_fullpart(bool part){ //初始化慢刷/快刷功能
   if(lastRefresh) return;
   //add driver code...
 }
 void drv::drv_setDepth(uint8_t i){
   epdFull=0; iLut = i?(i>15?15:i):15;  //如果需要, 改成自己的代码
 }
+/* 关于这里的f函数指针: f(n)代表访问屏幕缓存的第n字节
+  若设N=(((屏幕宽度+7)/8)*屏幕高度), 则n的取值范围为 0<=n<N .
+  比如一个缓存buffer, 有N字节, 那么可以用f(n)=buffer[n] 
+  函数语法为 drv_dispWriter([&](int n)->uint8_t{return buffer[n];},3);
+  呃 你就把里面的f(n)理解为buffer[n]就行.
+  */
 void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷新
   if(m&1){//stage 1
     if(lastRefresh) drv_dispWriter(f,2);
     //add driver code...
+    lastRefresh=millis();
   }
   if(m&2){//stage 2
     uint32_t ms=millis()-lastRefresh;

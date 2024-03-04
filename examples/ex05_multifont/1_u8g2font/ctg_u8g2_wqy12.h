@@ -35,6 +35,7 @@
 extern "C" {
 #endif
 extern const uint8_t ctg_u8g2_wqy12_chinese1[14241] ;
+extern const uint8_t ctg_u8g2_wqy12_gb2312[208522] ;
 extern const uint8_t ctg_u8g2_wqy12[626234] ;
 #ifdef __cplusplus
 }

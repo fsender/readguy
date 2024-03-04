@@ -409,16 +409,16 @@ void ReadguyDriver::setButtonDriver(){
   //}
   if(READGUY_buttons==2){
     btn_rd[0].setMultiBtn(1); //设置为多个按钮,不识别双击或三击
-    //btn_rd[0].setLongRepeatMode(1);
+    //btn_rd[0].setLongRepeatMode(1); //双按键 选择按键 设置为允许连按
     btn_rd[1].setMultiBtn(1); //设置为多个按钮,不识别双击或三击
-    btn_rd[1].setLongRepeatMode(0);
+    btn_rd[1].setLongRepeatMode(0);  //双按键 确定按键 设置为不允许连按
   }
   else if(READGUY_buttons==3){
-    btn_rd[0].long_press_ms = 50; //不识别双击三击, 只有按一下或者长按, 并且开启连按
+    btn_rd[0].long_press_ms = 20; //不识别双击三击, 只有按一下或者长按, 并且开启连按
     //btn_rd[0].setLongRepeatMode(1);
-    btn_rd[1].setMultiBtn(1); //设置为多个按钮,不识别双击或三击
-    btn_rd[1].setLongRepeatMode(0);
-    btn_rd[2].long_press_ms = 50; //不识别双击三击, 只有按一下或者长按, 并且开启连按
+  //btn_rd[1].setMultiBtn(1); //设置为多个按钮,不识别双击或三击    2024/2/25更新:需要支持连按适配拨轮
+    btn_rd[1].setLongRepeatMode(0); //三按键 确定按键 设置为不允许连按
+    btn_rd[2].long_press_ms = 20; //不识别双击三击, 只有按一下或者长按, 并且开启连按
     btn_rd[2].setLongRepeatMode(1);
   }
 #ifdef ESP8266 //对于esp8266, 需要注册到ticker. 这是因为没freertos.
@@ -535,11 +535,11 @@ void ReadguyDriver::display(std::function<uint8_t(int)> f, uint8_t part){
     //in_release(); //恢复
   }
 }
-void ReadguyDriver::drawImage(LGFX_Sprite &base, LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw, uint16_t zoomh) { 
+void ReadguyDriver::drawImage(LGFX_Sprite &base, LGFX_Sprite &spr,int32_t x,int32_t y,int32_t zoomw, int32_t zoomh) { 
   if(READGUY_cali==127) guy_dev->drv_drawImage(base, spr, x, y, 0, zoomw, zoomh); 
 }
-void ReadguyDriver::drawImageStage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_t x,uint16_t y,uint8_t stage,
-  uint8_t totalstage,uint16_t zoomw,uint16_t zoomh) {
+void ReadguyDriver::drawImageStage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,int32_t x,int32_t y,uint8_t stage,
+  uint8_t totalstage,int32_t zoomw,int32_t zoomh) {
   if(READGUY_cali!=127 || stage>=totalstage) return;
   //Serial.printf("stage: %d/%d\n",stage+1,totalstage);
   guy_dev->drv_drawImage(sprbase, spr, x, y, (totalstage<=1)?0:(stage==0?1:(stage==(totalstage-1)?3:2)),zoomw,zoomh);
@@ -547,7 +547,7 @@ void ReadguyDriver::drawImageStage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,uint16_
 void ReadguyDriver::setDepth(uint8_t d){ 
   if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling()) guy_dev->drv_setDepth(d); 
 }
-void ReadguyDriver::draw16grey(LGFX_Sprite &spr,uint16_t x,uint16_t y,uint16_t zoomw,uint16_t zoomh){
+void ReadguyDriver::draw16grey(LGFX_Sprite &spr,int32_t x,int32_t y,int32_t zoomw,int32_t zoomh){
   if(READGUY_cali!=127) return;
   if(guy_dev->drv_supportGreyscaling() && (spr.getColorDepth()&0xff)>1)
     return guy_dev->drv_draw16grey(*this,spr,x,y,zoomw,zoomh);
@@ -646,7 +646,8 @@ void ReadguyDriver::nvs_write(){
 #endif
 
 uint8_t ReadguyDriver::getBtn_impl(){ //按钮不可用, 返回0.
-  static uint32_t last=0;
+  static unsigned long last=0;
+  static unsigned long last2=0;
   uint8_t res1,res2,res3,res4=0;
   switch(READGUY_buttons){
     case 1:
@@ -658,16 +659,41 @@ uint8_t ReadguyDriver::getBtn_impl(){ //按钮不可用, 返回0.
       else if(res1 == 5) res4 |= 3; //单击后长按-新增操作(可以连按)
       break;
     case 2:
-      res1=btn_rd[0].read(); //两个按钮引脚都读取
-      res2=btn_rd[1].read();
-      
-      if(res1 && millis()-last >= btn_rd[1].long_press_ms && (!btn_rd[1].isPressedRaw()))
+      res1=btn_rd[0].read(); //选项上下键 两个按钮引脚都读取
+      res2=btn_rd[1].read(); //确定/返回键
+//#if 1
+      {
+        bool newval=btn_rd[0].isPressedRaw();
+        if(newval && last2) last2=0;
+        else if(!(newval || last2)) last2=millis();  //捕获按钮松开的行为
+        if(res1 && (millis()-last>=btn_rd[1].long_press_ms) && (!btn_rd[1].isPressedRaw())){
+          //Serial.printf("[%9d] res 1 state: %d %d\n",millis(),longpresstest,pressedRawtest);
+          res4 = (res1 == 1)?1:2;      //左键点按-向下翻页
+        }
+      }
+//#endif
+      /*
+      uint32_t nowm = millis();
+      if(res1 && nowm-last >= btn_rd[1].long_press_ms && (!btn_rd[1].isPressedRaw())){
         res4 = (res1 == 1)?1:2;      //左键点按-向下翻页
+        last=nowm;
+      }
       if(res2) {
         if(btn_rd[0].isPressedRaw()) res4 |= 3; //避免GCC警告(我常年喜欢-Werror=all
+        else if(res2 == 1 && nowm>last) res4 |= 4; //右键点按-确定
+        else if(res2 == 4 && nowm>last) res4 |= 8; //右键长按-返回
+        last=nowm;
+      }
+      */
+      if(res2) {
+        unsigned long ts=millis();
+        //Serial.printf("[%9lu] now last2: %lu, threshold %lu\n",ts,last2,ts-last2);
+        if(btn_rd[0].isPressedRaw() || ts-last2<=20) { //2024.2.25新增:  20毫秒的去抖时间 防误判
+          res4 |= 3; //避免GCC警告(我常年喜欢-Werror=all
+        }
         else if(res2 == 1) res4 |= 4; //右键点按-确定
         else if(res2 == 4) res4 |= 8; //右键长按-返回
-        last=millis();
+        last=ts;
       }
       if(res4==5 || res4==6) res4=3;
       break;
@@ -683,6 +709,7 @@ uint8_t ReadguyDriver::getBtn_impl(){ //按钮不可用, 返回0.
       //if(res3 && ((millis()-last)<btn_rd[0].long_repeat_ms)) res4 |=3;
       if(res2 == 1) res4 |= 4;
       else if(res2 == 4) res4 |= 8;
+      else if(res2 == 2) res4 |= 3; //新增: 双击进入操作5
       break;
   }
   return res4;

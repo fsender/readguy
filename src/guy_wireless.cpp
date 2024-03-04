@@ -516,12 +516,16 @@ void ReadguyDriver::handlePinSetup(){
 #if defined(ESP8266)
   for(int i=2;i<12;i++){
     if(i>=6 && i<=8) continue;
-#elif defined(CONFIG_IDF_TARGET_ESP32C3)
-  for(int i=2;i<12;i++){
 #else
   for(int i=0;i<12;i++){
-#endif
     s += F("<br/>");
+#if defined(CONFIG_IDF_TARGET_ESP32C3)
+    if(i==7) {
+      i+=2; //优化ESP32C3的SPI配置体验 (C3只能共线)
+      s += F("(ESP32C3不支持SD卡独立SPI总线! SD_MOSI和SD_SCLK沿用EPDMOSI和EPDSCLK)<br/>");
+    }
+#endif
+#endif
     s += FPSTR(args_name[i+2]);
     s += F("<input type=\"number\" id=\"");
     s += FPSTR(args_name[i+2]);

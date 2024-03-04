@@ -43,20 +43,45 @@ constexpr int fastRefTime       =500;  //驱动屏幕快刷时间, 单位毫秒
 
 class drv : public readguyEpdBase {
 public:
+  /** @brief 返回驱动程序ID. 此函数不需要在 cpp 文件内重写
+   *  @return int 直接返回对应宏定义就可以  */
   int drv_ID() const { return READGUY_DEV_template; }
-  void drv_init(); //初始化屏幕
-  void drv_fullpart(bool part); //切换慢刷/快刷功能
-  void drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m=3); //按照函数刷新
-  void drv_sleep() ; //开始屏幕睡眠
-  int drv_width() const { return GUY_D_WIDTH;  }; //返回显示区域宽度
-  //int drv_panelwidth() const { return GUY_D_WIDTH;  }; //返回缓存的数据宽度
-  int drv_height() const{ return GUY_D_HEIGHT; }; //返回显示区域高度
-  void drv_setDepth(uint8_t i); //设置显示颜色深度
+  /// @brief 初始化屏幕 不过大多数时候此函数只需要初始化启动变量就行
+  // 比如将模式设为慢刷, 设置为未上电状态 这样下次刷新必为全屏慢刷
+  void drv_init();
+  /// @brief 切换慢刷/快刷功能
+  /// @param part 为1则为快刷, 为0则为慢刷
+  void drv_fullpart(bool part);
+  /** @brief 刷屏函数. 程序接口按照此函数刷新
+  /   @param f 读取像素数据的函数. 这个函数用于替代屏幕缓存数组.
+  /  因为有时候屏幕缓存数组不能满足一些显示场景, 比如存储空间复用, 缩放显示等
+  /   @param m 刷新模式: 
+  /   1-仅执行前半部分 执行前半部分之后将会向屏幕发送数据后立即退出. (不等busy信号)
+  /   2-仅执行后半部分  执行后半部分之后会进行屏幕刷新完之后该执行的操作
+  /   3-完整刷屏: 执行1部分->等待busy信号->执行2部分  */
+  void drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m=3);
+  /// @brief 开始屏幕睡眠/低功耗模式
+  void drv_sleep() ; 
+  /// @brief 返回显示区域宽度
+  int drv_width() const { return GUY_D_WIDTH;  }; 
+  /// @brief 返回显示区域高度
+  int drv_height() const{ return GUY_D_HEIGHT; };
+  /** @brief 设置显示颜色深度. 只有在受支持 屏幕上才可以设置灰度
+  /   @param i 有效值 1~16 0必须为无效 */
+  void drv_setDepth(uint8_t i);
+  /** @brief 设置屏幕是否支持连续灰度刷新.
+  /   @return 设置为 0 不支持灰度 16 支持灰度 -16 支持连续刷新灰度
+  / 连续刷新灰度: 先刷深色部分 再刷浅色部分, 原来的深色部分每次刷新都会逐渐越来越深色.
+  / 如果不提供连续刷新灰度接口 则使用setDepth函数 先刷浅色部分 再刷深色部分
+  / 可以在支持连续刷新的屏幕上烧录范例程序查看效果. 通常都是好于非连续刷新的灰度 */
   int drv_supportGreyscaling() const { return 16; }
+  // 在支持连续灰度刷新的屏幕上 还要额外实现一个函数用于连续刷新接口 
+  /// @brief 设置连续刷新功能函数. 范例可以看guy_420a文件内的示例,分步执行连续刷灰度
+  //void drv_draw16grey_step(std::function<uint8_t(int)> f, int step);
 private:
   uint8_t epd_PowerOn=1;  //是否上电. 睡眠则设为0
   uint8_t epdFull=0;      //是partical模式/快速刷新模式 0快刷, 1慢刷
-  uint8_t iLut=15;        //颜色深度
+  uint8_t iLut=15;        //颜色深度 1-15均为有效. 慢刷模式中 此数值为15.
 };
 } 
 #endif /* END OF FILE. ReadGuy project.

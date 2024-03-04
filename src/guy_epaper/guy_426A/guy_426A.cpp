@@ -51,6 +51,7 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷�
   if(m&1){//stage 1
     if(lastRefresh) drv_dispWriter(f,2);
     //add driver code...
+    lastRefresh=millis();
   }
   if(m&2){//stage 2
     uint32_t ms=millis()-lastRefresh;
