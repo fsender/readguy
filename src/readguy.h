@@ -163,6 +163,16 @@
 #define READGUY_SLOW_END   4
 #define READGUY_FAST_END   5
 
+  //按键行为     下一个     上一个     确定      返回/退出    特殊操作(如切换输入法)
+  //1个按键 返回 1=点按     2=双击    4=长按     8=三击      3=点按后接长按
+  //2个按键 返回 1=左键点按 2=左键长按 4=右键点按 8=右键长按  3=按住左键点按右键
+  //3个按键 返回 1=右键点按 2=左键点按 4=中键点按 8=中键长按  3=中间按键双击(需手动开启)
+#define GUY_BTN_PREV     1 //上一个
+#define GUY_BTN_NEXT     2 //下一个
+#define GUY_BTN_SPECIAL  3 //确定 选择
+#define GUY_BTN_OK       4 //返回/退出
+#define GUY_BTN_BACK     8 //特殊操作(如切换输入法)
+
 class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
   public:
 #ifdef READGUY_ESP_ENABLE_WIFI
@@ -247,6 +257,11 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     } serveFunc;
     /// @brief 初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
     void ap_setup();
+    /*** @brief 初始化WiFi AP模式, 用于将来的连接WiFi 可以自定义模式切换的函数
+     * @param ssid 设置ap的名称
+     * @param pass 设置ap的密码
+     * @param m WiFi模式        */
+    void ap_setup(const char *ssid, const char *pass, int m=(int)WIFI_AP);
     /// @brief 初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
     void server_setup(const String &notify=emptyString, const serveFunc *serveFuncs = nullptr, int funcs = 0);
     bool server_loop();
@@ -260,6 +275,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     } serveFunc;
     /// @brief 初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
     void ap_setup(){}
+    void ap_setup(const char *ssid, const char *pass, int m=2){}
     /// @brief 初始化服务器模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
     void server_setup(const String &notify=emptyString, const serveFunc *serveFuncs = nullptr, int funcs = 0){}
     bool server_loop(){ return true; }

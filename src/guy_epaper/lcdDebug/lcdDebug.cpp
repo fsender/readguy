@@ -81,7 +81,9 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷�
         }
       }
     }
+    yield();
   }
+  delay(50);
 }
 void drv::drv_sleep() {}
 }

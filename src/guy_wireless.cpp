@@ -177,14 +177,17 @@ const char *ReadguyDriver::epd_drivers_list[EPD_DRIVERS_NUM_MAX]={
 //x==62 -> _
 //#define R2CHAR(x) (((x)==63)?42:(((x)==62)?95:(((x)>=36)?((x)+61):(((x)>=10)?((x)+55):((x)+48)))))
 void ReadguyDriver::ap_setup(){
+  return ap_setup("readguy","12345678");
+}
+void ReadguyDriver::ap_setup(const char *ssid, const char *pass, int m){
   //初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
-  WiFi.mode(WIFI_AP);
+  if(m>=0 && m<=3) WiFi.mode((WiFiMode_t)m); //有时候还需要STA+AP或者是一开始就确定好了wifi模式
   IPAddress local_IP(192,168,4,1);
   IPAddress gateway(192,168,4,1);
   IPAddress subnet(255,255,255,0);
   WiFi.softAPConfig(local_IP, gateway, subnet);
-  WiFi.softAP("readguy","12345678");
-  Serial.println(F("[Guy AP] ap_setup SSID: readguy, Pass: 12345678"));
+  WiFi.softAP(ssid,pass);
+  Serial.printf_P(PSTR("[Guy AP] ap_setup SSID: %s, Pass: %s\n"),ssid,pass);
 }
 void ReadguyDriver::server_setup(const String &notify, const serveFunc *serveFuncs, int funcs){
   //启动WiFi服务器端, 这样就可以进行配网工作

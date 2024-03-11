@@ -41,21 +41,21 @@
 
 class readguyImage{
   public:
-    readguyImage(ReadguyDriver &_guy):guy(&_guy){}
-
+    readguyImage(ReadguyDriver &_guy):guy(&_guy){
+      w=guy->width(); h=guy->height();
+    }
     /** @brief 显示图像. use16grey: 为true则使用16灰度,false则不用
-     *  @note 需要提前设置绘制参数, 直接在类的外部 设置此类的成员函数即可.
-     *        对于不会C++的朋友们, 可以看示例.
+     *  @note 需要提前设置绘制参数, 直接在类的外部 设置此类的成员函数即可. 对于不会C++的朋友们, 可以看示例.
+     *  注意该函数会调用 guy.display 来刷屏, 因此
      *  @param baseFs, filename 文件系统和文件名. 必须指定.
      *  @param x, y 显示在屏幕的什么地方
-     * 
-     *  @param use16grey 0: 使用单色抖动 1:使用16灰度 2:使用16灰度但不抖动
+     *  @param use16grey 0: 使用单色抖动 1:使用16灰度 (如果要开关抖动则需要用setGreyQuality设置)
      * */
     void drawImageFile(bool use16grey = 0);
 
     /** @brief 将图像绘制到系统缓存内. 必须预分配内存, 并且需要知道分配的大小.
-     *  @note 需要提前设置绘制参数, 直接在类的外部 设置此类的成员函数即可.
-     *        对于不会C++的朋友们, 可以看示例.
+     *  @note 需要提前设置绘制参数, 直接在类的外部 设置此类的成员函数即可. 对于不会C++的朋友们, 可以看示例.
+     *  注意该函数会调用 guy.display 来刷屏
      *  @param baseFs, filename 文件系统和文件名. 必须指定.
      *  @param x, y 显示在屏幕缓存的什么地方
      *  @param w, h 开辟的缓存宽度和高度. 最好是和图片的大小相匹配.
