@@ -92,7 +92,7 @@ class guy_button{
     uint8_t prev_state;
     uint8_t click_count = 0;
     uint8_t _pressedState;
-    uint8_t multibtn; //是否为多个按钮, 可自己设置
+    uint8_t scanDT; //是否为多个按钮, 可自己设置
     uint8_t last_click_type = GUYBUTTON_empty;
     volatile uint8_t lk = 255;
     //int id;
@@ -123,7 +123,7 @@ class guy_button{
     uint8_t getType() const { return last_click_type; }
     uint8_t read();
     void loop();
-    void setMultiBtn(uint8_t btns) { multibtn = btns; }
+    void enScanDT(uint8_t scan) { scanDT = scan; }
     /* void setMinDebounce(short n) { min_debounce    =n;}   //去抖时间
     void setLongPressMs(short n) { long_press_ms   =n;}  //长按持续时间+双击识别间隔最大时间
     void setLongRepeat(short n)  { long_repeat_ms  =n;}  //长按连按间隔时间

@@ -51,9 +51,9 @@ typedef ReadguyDriver::ReadguyWebServer* server_t; //类型名太长太繁琐, �
 typedef ReadguyDriver::serveFunc         event_t ; //存储一个WiFi功能事件.
 
 const PROGMEM char textShowHtml[]= R"EOF(<!DOCTYPE html>
-<html lang=\"zh-cn\">
+<html lang="zh-cn">
 <head>
-  <meta charset=\"utf-8\">
+  <meta charset="utf-8">
   <title>WiFi传文字</title>
 </head>
 <body>

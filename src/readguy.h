@@ -283,6 +283,8 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     uint8_t getBtn() { return (READGUY_cali==127)?getBtn_impl():0; }
     /// @brief [此函数已弃用 非常不建议使用] 根据按钮ID来检查按钮. 注意这里如果按下返回0, 没按下或者按钮无效返回1
     //uint8_t getBtn(int btnID){return btnID<getButtonsCount()?(!(btn_rd[btnID].isPressedRaw())):1;}
+
+    void setButtonSpecial(bool en = 1) { if(READGUY_buttons==3) btn_rd[1].enScanDT(en); }
     /** @brief 返回可用的文件系统. 当SD卡可用时, 返回SD卡. 否则根据情况返回最近的可用文件系统
      *  @param initSD 2:总是重新初始化SD卡; 1:若SD卡不可用则初始化; 0:SD卡不可用则返回LittleFS. */
     fs::FS &guyFS(uint8_t initSD = 0);
@@ -359,7 +361,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     static const PROGMEM char index_cn_html16[];
     static const PROGMEM char verify_html[];
     static const PROGMEM char verify2_html[];
-    static const PROGMEM char verifybtn_html[3][200];
+    static const PROGMEM char verifybtn_html[3][224];
     static const PROGMEM char final_html[];
     static const PROGMEM char afterConfig_html[];
     static const PROGMEM char home_html[];

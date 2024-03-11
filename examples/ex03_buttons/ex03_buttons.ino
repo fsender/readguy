@@ -6,10 +6,15 @@
  * 
  * @file ex03_buttons.ino
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
- * @version 1.1 增加了新的手势功能
+ * @version 1.2 增加了新的手势功能
  * 
- * @date created: 2023-10-20 last modify: 2024-02-25
+ * @date created: 2023-10-20    modify: 2024-02-25   last modify: 2024-03-11
  * @brief ReadGuy 按键功能演示. ReadGuy自带的按键驱动程序是非常好用的
+  以下内容为按键个数与手势操作的对应关系.
+  //行为         下一个     上一个     确定      返回/退出    特殊操作(如切换输入法)
+  //1个按键 返回 1=点按     2=双击    4=长按     8=三击      3=点按后接长按
+  //2个按键 返回 1=左键点按 2=左键长按 4=右键点按 8=右键长按  3=按住左键点按右键
+  //3个按键 返回 1=右键点按 2=左键点按 4=中键点按 8=中键长按  3=中间按键双击(需手动开启)
 
  * @attention
  * Copyright (c) 2022-2023 FriendshipEnder
@@ -44,38 +49,36 @@ void setup(){
   Serial.println(F("[readguy] Button demo")); //显示文本 默认是不支持中文显示的.
   guy.println("Button demo"); //显示文本 默认是不支持中文显示的.
   guy.display();//刷新墨水屏.
+  guy.setButtonSpecial(true);//对于三按键系统,打开此模式将会允许双击进行特殊操作(如切换键盘)
 }
 
 void loop(){
   int val = guy.getBtn(); //此函数用于获取按键状态 没有按键按下时 返回0.
-  //1个按键 返回 1=点按     2=双击    3=长按     4=三击
-  //2个按键 返回 1=左键点按 2=左键长按 3=右键点按 4=右键长按
-  //3个按键 返回 1=左键点按 2=右键点按 3=中键点按 4=中键长按
 
   if(val>0){
     int c = guy.getButtonsCount(); //此函数用于返回设备有多少个按键. [最近更新的函数]
     switch (val){
-      case 1: 
+      case 1: //下一个  手势
         if(c==1) guy.println("key single clicked!");
         else if(c==2) guy.println("Left key clicked!");
-        else if(c==3) guy.println("Left key clicked!");
-      break;
-      case 2:
-        if(c==1) guy.println("key double clicked!");
-        else if(c==2) guy.println("Left key long pressed!");
         else if(c==3) guy.println("Right key clicked!");
       break;
-      case 3:
-        if(c==1) guy.println("key triple clicked!");
+      case 2: //上一个  手势
+        if(c==1) guy.println("key long pressed!");
+        else if(c==2) guy.println("Left key long pressed!");
+        else if(c==3) guy.println("Left key clicked!");
+      break;
+      case 3: //特殊  手势
+        if(c==1) guy.println("key clicked and pressed!");
         else if(c==2) guy.println("Right clicked at left pressing!");
         else if(c==3) guy.println("Centre key double clicked!");
       break;
-      case 4:
-        if(c==1) guy.println("key long pressed!");
+      case 4: //确定 手势
+        if(c==1) guy.println("key double clicked!");
         else if(c==2) guy.println("Right key clicked!");
         else if(c==3) guy.println("Centre key clicked!");
       break;
-      case 8:
+      case 8: //返回  手势
         if(c==1) guy.println("key triple clicked!");
         else if(c==2) guy.println("Right key long pressed!");
         else if(c==3) guy.println("Centre key long pressed!");

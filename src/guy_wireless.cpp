@@ -516,6 +516,7 @@ void ReadguyDriver::handlePinSetup(){
 #if defined(ESP8266)
   for(int i=2;i<12;i++){
     if(i>=6 && i<=8) continue;
+    s += F("<br/>");
 #else
   for(int i=0;i<12;i++){
     s += F("<br/>");
@@ -711,13 +712,13 @@ const PROGMEM char ReadguyDriver::verify_html[] =
 const PROGMEM char ReadguyDriver::verify2_html[] =
 "<br/><hr/>完成上述4个操作之后屏幕上将会展现出验证码,输入验证码即可完成硬件配置.<br/></p><form action=\"/fin"
 "al\" method=\"POST\"><input type=\'text\' name=\'t_verify\' maxlength=\"6";
-const PROGMEM char ReadguyDriver::verifybtn_html[3][200] = {
-"一个按键, 操作可能比较繁琐, 但功能还都可以的.<br/>"
-"点按: 下一个/向下翻页<br/>双击: 确定/选择<br/>三连击: 返回/切换输入法<br/>长按: 上一个/向上翻页",
+const PROGMEM char ReadguyDriver::verifybtn_html[3][224] = {
+"一个按键, 功能全保留, 操作可能比较繁琐.<br/>"
+"点按:下一个/向下翻页<br/>双击:确定/选择<br/>三连击:返回/退格<br/>长按半秒:上一个/向上翻页<br/>点按紧接着长按: 特殊操作",
 "两个按键, 操作可以满足需求.<br/>"
-"按键1点按: 下一个/向下翻页<br/>按键1长按: 上一个/向上翻页<br/>按键2点按: 确定/选择<br/>按键2长按: 返回/切换输入法",
-"三个按键, 操作非常流畅.<br/>"
-"按键1: 上一个/向上翻页<br/>按键2点按: 确定/选择<br/>按键2长按: 返回/切换输入法<br/>按键3: 下一个/向下翻页"
+"按键1点按:下一个/向下翻页<br/>按键1长按:上一个/向上翻页<br/>按键2点按:确定/选择<br/>按键2长按:返回/退格<br/>按住按键1点按2:特殊操作",
+"三个按键, 操作非常方便流畅.<br/>"
+"按键1:上一个/向上翻页<br/>按键2点按:确定/选择<br/>按键2长按: 返回/退格<br/>按键3:下一个/向下翻页<br/>双击点按2:切换输入法等特殊操作"
 };
 const PROGMEM char ReadguyDriver::final_html[] =
 "欢迎使用 readguy</title></head><body><h1>readguy ";

@@ -67,7 +67,7 @@ guy_button::guy_button() {
   //id = _nextID++;
 }
 
-void guy_button::begin(uint8_t _pin, std_U8_function_U8 f, bool activeLow /* = true */) {  
+void guy_button::begin(uint8_t _pin, std_U8_function_U8 f, bool activeLow/*=true*/) {
   //pin = attachTo;
   //id = _nextID++;
   _pressedState = activeLow ? LOW : HIGH;
@@ -79,7 +79,7 @@ void guy_button::begin(uint8_t _pin, std_U8_function_U8 f, bool activeLow /* = t
   min_debounce    =25;   //去抖时间
   long_press_ms   =300;  //长按持续时间+双击识别间隔最大时间
   long_repeat_ms  =200;  //长按连按间隔时间
-  multibtn        =0;
+  scanDT          =1;    // =1识别双击或三击, =0则不识别双击或三击等需要延时返回的情况
   lk=0;
 }
 bool guy_button::isPressedRaw() {
@@ -144,7 +144,7 @@ void guy_button::loop() {
           longclick_detected = true;
       }
     // is the button released and the time has passed for multiple clicks?
-    } else if (now - click_ms > (multibtn?min_debounce:long_press_ms)) {
+    } else if (now - click_ms > (scanDT?long_press_ms:min_debounce)) {
       // was there a longclick?
       if (longclick_detected) {
         // was it part of a combination?
@@ -157,17 +157,14 @@ void guy_button::loop() {
 
       // determine the number of single clicks
       } else if (click_count > 0) {
-        switch (click_count) {
-          case 1: 
-            last_click_type = GUYBUTTON_single_click;
-            break;
-          case 2: 
-            last_click_type = GUYBUTTON_double_click;
-            break;
-          case 3: 
-            last_click_type = GUYBUTTON_triple_click;
-            break;
+        if(scanDT){
+          switch (click_count) {
+            case 1: last_click_type = GUYBUTTON_single_click; break;
+            case 2: last_click_type = GUYBUTTON_double_click; break;
+            case 3: last_click_type = GUYBUTTON_triple_click;
+          }
         }
+        else last_click_type = GUYBUTTON_single_click; //此时若click_count>1 视为抖动
         was_pressed = true;
       }
       // clean up

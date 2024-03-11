@@ -7,7 +7,7 @@
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
  * @brief readguy 基础功能源代码文件. 
  * @version 1.0
- * @date 2023-09-21
+ * @date created: 2023-09-21    last modify: 2024-03-11
 
  * @attention
  * Copyright (c) 2022-2023 FriendshipEnder
@@ -408,15 +408,15 @@ void ReadguyDriver::setButtonDriver(){
     btn_rd[0].setLongRepeatMode(1); //允许连按
   //}
   if(READGUY_buttons==2){
-    btn_rd[0].setMultiBtn(1); //设置为多个按钮,不识别双击或三击
+    btn_rd[0].enScanDT(0); //不识别双击或三击
     //btn_rd[0].setLongRepeatMode(1); //双按键 选择按键 设置为允许连按
-    btn_rd[1].setMultiBtn(1); //设置为多个按钮,不识别双击或三击
+    btn_rd[1].enScanDT(0); //不识别双击或三击
     btn_rd[1].setLongRepeatMode(0);  //双按键 确定按键 设置为不允许连按
   }
   else if(READGUY_buttons==3){
     btn_rd[0].long_press_ms = 20; //不识别双击三击, 只有按一下或者长按, 并且开启连按
     //btn_rd[0].setLongRepeatMode(1);
-  //btn_rd[1].setMultiBtn(1); //设置为多个按钮,不识别双击或三击    2024/2/25更新:需要支持连按适配拨轮
+    btn_rd[1].enScanDT(0); //不识别双击或三击(默认)    2024/2/25更新:需要支持连按适配拨轮
     btn_rd[1].setLongRepeatMode(0); //三按键 确定按键 设置为不允许连按
     btn_rd[2].long_press_ms = 20; //不识别双击三击, 只有按一下或者长按, 并且开启连按
     btn_rd[2].setLongRepeatMode(1);
@@ -434,7 +434,7 @@ void ReadguyDriver::setButtonDriver(){
     btn_rd[0].setLongPressMs(1); //不识别双击三击, 只有按一下或者长按, 并且开启连按
     btn_rd[0].begin(33,rd_btn_f);
     btn_rd[0].setLongRepeatMode(1);
-    btn_rd[1].setMultiBtn(1); //设置为多个按钮,不识别双击或三击
+    btn_rd[1].enScanDT(1); //设置为多个按钮,不识别双击或三击
     btn_rd[1].begin(32,rd_btn_f);
     btn_rd[1].setLongRepeatMode(0);
     btn_rd[2].setLongPressMs(1); //不识别双击三击, 只有按一下或者长按, 并且开启连按
