@@ -71,20 +71,21 @@ SOFTWARE.
 /////////////////////////////////////////////////////////////////
 
 
-#define GUYBUTTON_empty          0
-#define GUYBUTTON_single_click   1
-#define GUYBUTTON_double_click   2
-#define GUYBUTTON_triple_click   3
-#define GUYBUTTON_long_click     4
-#define GUYBUTTON_xlong_click    5
-#define GUYBUTTON_xxlong_click   6
-#define GUYBTN_READ_TIMEOUT    100
-#define GUYBTN_LOOP_TIMEOUT     10
+#define GUYBUTTON_empty          0 //没按下
+#define GUYBUTTON_single_click   1 //单击
+#define GUYBUTTON_double_click   2 //双击
+#define GUYBUTTON_triple_click   3 //三击
+#define GUYBUTTON_long_click     4 //长按
+#define GUYBUTTON_xlong_click    5 //点击后接长按
+#define GUYBUTTON_xxlong_click   6 //双击后接长按
+#define GUYBTN_READ_TIMEOUT    100 //读取延时
+#define GUYBTN_LOOP_TIMEOUT     10 //循环扫描延时
 
 class guy_button{
   public:
     uint16_t min_debounce    ;   //去抖时间
-    uint16_t long_press_ms   ;  //长按持续时间+双击识别间隔最大时间
+    uint16_t long_press_ms   ;  //长按持续时间
+    uint16_t double_press_ms ;  //双击识别间隔最大时间
     uint16_t long_repeat_ms  ;  //长按连按间隔时间
   protected:
     uint8_t pin = 255; //未定义引脚
@@ -113,16 +114,39 @@ class guy_button{
 
   public:
     guy_button();
+    /// @brief 初始化
+    /// @param _pin 引脚ID. 传入的引脚在内部将会使用digitalRead函数实现
+    /// @param activeLow 设置为true时, 当读取到低电平视为按下
+    void begin(uint8_t _pin, bool activeLow = true){
+      begin(_pin,[](uint8_t p)->uint8_t { return digitalRead(p); },activeLow);
+    }
+    /// @brief 初始化
+    /// @param _pin 引脚ID. 传入的引脚在内部将会使用digitalRead函数实现
+    /// @param f 触发函数: 当activeLow为false时, 返回1表示按下, 0表示没按下 为true时相反
+    /// @note 默认的 f 是 匿名函数 [](uint8_t p)->uint8_t { return digitalRead(p); }
+    ///       如果自己指定了函数而且没有用到内置的参数, 那么 _pin 参数可能是没有任何用处的
     void begin(uint8_t _pin, std_U8_function_U8 f, bool activeLow  = true);
+    /// @brief 设置长按连按触发模式
+    /// @param trigMode 0:单次长按 1:连续长按
     void setLongRepeatMode(bool trigMode) { trig_mode = trigMode; }
+    /// @brief 长按了多久按钮
     unsigned int wasPressedFor() const { return down_time_ms; }
+    /// @brief 返回是否处于被按下的状态 受loop扫描的限制, 如果没loop扫描则可以先手动调用扫描后使用
     bool isPressed() const { return (state == _pressedState); }
+    /// @brief 读取原始的按钮状态 (不去抖动), 此函数不受loop扫描的限制
     bool isPressedRaw(); // { return (get_state_cb(pin) == _pressedState); }
+    /// @brief 曾经按下的状态 是否是点击后立即松开
     bool wasPressed(){ if(was_pressed){ was_pressed = false; return true; } return false; }
+    /// @brief 连击了几下
     uint8_t getNumberOfClicks() const{ return click_count;}
+    /// @brief [已经弃用] 获取上次按钮的按下数据. 返回按钮状态(按钮状态参考read函数的说明)
     uint8_t getType() const { return last_click_type; }
+    /// @brief 读取按钮的按下数据. 返回按钮状态 0没按 1单击 2双击 3三击 4长按 5点击后长按 6双击后长按
     uint8_t read();
+    /// @brief 连续循环扫描按钮. 必须多次反复调用, 最好是单独开一个task来实现
     void loop();
+    /// @brief 设置是否识别双击 三连击等高级手势
+    /// @param scan =1识别双击或三击, =0则不识别双击或三击等需要延时返回的情况
     void enScanDT(uint8_t scan) { scanDT = scan; }
     /* void setMinDebounce(short n) { min_debounce    =n;}   //去抖时间
     void setLongPressMs(short n) { long_press_ms   =n;}  //长按持续时间+双击识别间隔最大时间

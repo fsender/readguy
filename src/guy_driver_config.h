@@ -73,9 +73,10 @@
 #define READGUY_ENABLE_WIFI
 
 /// @brief 启用I2C功能. 可用于联网时钟, 温度计, 陀螺仪等外设. 目前暂不支持库内使用类似函数. 仅可以提供引脚定义
-#define READGUY_ENABLE_I2C
+//#define READGUY_ENABLE_I2C 
+/// @note 现在库不提供任何I2C驱动, 只提供引脚定义的存储和读取, 这几乎不增加多少代码. 因此本宏不再使用
 
-/** @brief (即将推出) 启用SD卡功能. 开启此功能将会使用内置SD卡管理功能. 关闭后仅可保存SD卡用到的引脚.
+/** @brief 启用SD卡功能. 开启此功能将会使用内置SD卡管理功能. 关闭后仅可保存SD卡用到的引脚.
     @note 会破坏兼容性. 若没有启用通用的SD卡驱动程序, 那么那些跨屏台编译的程序将无法用guyFS读取到SD卡.
     若用户程序希望能从外部加载SD卡, 可以使用getSdMiso()等函数获取SD卡的Miso等引脚, 再由用户程序初始化SD卡. */
 #define READGUY_ENABLE_SD
@@ -83,9 +84,13 @@
 /// @brief 使用LittleFS作为片上文件系统, 注释此行则用SPIFFS(功能少, 不好用)
 #define READGUY_USE_LITTLEFS 1
 
+/// @brief 使用esp8266时, EEPROM(类似NVS)的存储位置起点 (从起点开始的40字节被readguy所使用) 可选值: 0~4045
+/// @note 对于单一项目来说, 此选项不建议更改, 请在项目初期就确定此变量的值.
+#define READGUY_ESP8266_EEPROM_OFFSET 2
+
 /// @brief ESP32按键服务任务的栈空间大小, 不建议普通用户更改. 默认值1024字节. 小于此大小会使程序栈溢出.
 #ifdef CONFIG_IDF_TARGET_ESP32S3
-#define BTN_LOOPTASK_STACK 1280
+#define BTN_LOOPTASK_STACK 1536
 #else
 #define BTN_LOOPTASK_STACK 1024
 #endif

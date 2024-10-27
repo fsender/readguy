@@ -77,7 +77,8 @@ void guy_button::begin(uint8_t _pin, std_U8_function_U8 f, bool activeLow/*=true
   pin = _pin;
   state = get_state_cb(pin);
   min_debounce    =25;   //去抖时间
-  long_press_ms   =300;  //长按持续时间+双击识别间隔最大时间
+  long_press_ms   =300;  //长按持续时间
+  double_press_ms =300;  //双击识别间隔最大时间
   long_repeat_ms  =200;  //长按连按间隔时间
   scanDT          =1;    // =1识别双击或三击, =0则不识别双击或三击等需要延时返回的情况
   lk=0;
@@ -144,7 +145,7 @@ void guy_button::loop() {
           longclick_detected = true;
       }
     // is the button released and the time has passed for multiple clicks?
-    } else if (now - click_ms > (scanDT?long_press_ms:min_debounce)) {
+    } else if (now - click_ms > (scanDT?double_press_ms:min_debounce)) {
       // was there a longclick?
       if (longclick_detected) {
         // was it part of a combination?

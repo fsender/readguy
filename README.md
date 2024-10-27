@@ -4,7 +4,7 @@
 
 <img src="extra/artset/readguy_theme3.png" width="30%" height="auto">
 
-**版本1.3.6正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
+**版本1.3.7正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
 
 **即将发布7个全新的屏幕驱动: 欢迎支持! (详见后面的驱动表格)**
 
@@ -209,7 +209,7 @@ firmware.bin              0x10000
 
 **如果想要使用纯arduino环境, 需要更改platformio.ini, 并将framework更改为`arduino`. 此时可以跳过 5~6 步骤**.
 
-5. 编译目标是`ESP32`时, 需要单独安装[`LittleFS`](https://github.com/joltwallet/esp_littlefs)库来实现相关功能. 在项目内新建文件夹`components`, 在`components`文件夹内放入刚刚克隆的`LittleFS`库. *详见下图**上**方红框*. (使用纯arduino时跳过此步骤)
+5. 编译目标是`ESP32`且使用`ESP-IDF arduino component`时, 需要单独安装[`LittleFS`](https://github.com/joltwallet/esp_littlefs)库来实现相关功能. 在项目内新建文件夹`components`, 在`components`文件夹内放入刚刚克隆的`LittleFS`库. *详见下图**上**方红框*. (使用纯arduino时跳过此步骤)
 
 <img src="extra/artset/build_dir_structure.png" width="20%" height="auto">
 
@@ -235,13 +235,31 @@ firmware.bin              0x10000
 
 其中的WiFi功能, 其实是可以禁掉的. 只要你提前配置成功, 那么就可以摆脱WiFi配网配引脚功能. 
 
-使用方法: 打开文件[guy_driver_config.h](src/guy_driver_config.h), 随后便根据注释来选择性的开启或关闭一些系统功能.
+使用方法: 打开文件[`guy_driver_config.h`](src/guy_driver_config.h), 随后便根据注释来选择性的开启或关闭一些系统功能.
 
 **不推荐的做法!**: 其中有些屏幕用不到, 也可以通过`guy_epaper_config`来配置.
 
-使用方法: 打开文件[guy_epaper_config.h](src/guy_epaper/guy_epaper_config.h), 随后便可以设置不加载哪些屏幕的驱动程序.
+使用方法: 打开文件[`guy_epaper_config.h`](src/guy_epaper/guy_epaper_config.h), 随后便可以设置不加载哪些屏幕的驱动程序.
 
 此操作可以节约flash和RAM消耗, **但是实际上此操作并不能节省太多的flash.** 为确保编译获得的程序兼容性, 应尽量不要更改这个文件.
+
+- 还有一部分功能可以通过更改这两个文件来进行编辑 (如你想自己实现一个SD卡驱动)
+
+- 但是如果自己更改了WiFi配置引脚的功能, ***这样编译出的程序就不能实现跨硬件运行了***
+
+*有一些宏定义的组合是没有检验是否能够通过编译的. 如果有问题请提issue或者群里反馈*
+
+## ESP32 项目配置 (使用 PlatformIO + Arduino as ESP-IDF component 环境)
+
+menuconfig 内容:
+
+```
+FREERTOS_HZ = 1000
+ESP32_DEFAULT_CPU_FREQ_MHZ = 240
+ESP32_BROWNOUT_DET_LVL = 0
+ESP_PHY_REDUCE_TX_POWER=y
+FATFS_API_ENCODING_UTF_8 = true
+```
 
 ---
 

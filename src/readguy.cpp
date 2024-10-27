@@ -39,7 +39,7 @@ const PROGMEM char ReadguyDriver::projname[8] = "readguy";
 const PROGMEM char ReadguyDriver::tagname[7] = "hwconf";
 volatile uint8_t ReadguyDriver::spibz=0;
 #ifndef DYNAMIC_PIN_SETTINGS
-const int8_t ReadguyDriver::config_data[22] = {
+const int8_t ReadguyDriver::config_data[32] = {
   127              , //READGUY_cali
   READGUY_shareSpi ,
   READGUY_epd_type ,// 对应的epd驱动程序代号, -1为未指定
@@ -51,10 +51,10 @@ const int8_t ReadguyDriver::config_data[22] = {
   READGUY_epd_rst  ,// 目标显示器的 RST  引脚
   READGUY_epd_busy ,// 目标显示器的 BUSY 引脚
   //sd卡驱动部分, 默认使用hspi (sd卡建议用hspi)
-  READGUY_sd_miso  ,// 目标sd卡的 MISO 引脚, sd_share_spi == 1 时无效
-  READGUY_sd_mosi  ,// 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
-  READGUY_sd_sclk  ,// 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
-  READGUY_sd_cs    ,// 目标sd卡的 CS   引脚.
+  READGUY_sd_miso  ,// 目标sd卡的 MISO 引脚, 或esp32s3使用SDIO的 DAT0 引脚, sd_share_spi == 1 时无效
+  READGUY_sd_mosi  ,// 目标sd卡的 MOSI 引脚, 或esp32s3使用SDIO的 CMD 引脚, sd_share_spi == 1 时无效
+  READGUY_sd_sclk  ,// 目标sd卡的 SCLK 引脚, 或esp32s3使用SDIO的 CLK 引脚, sd_share_spi == 1 时无效
+  READGUY_sd_cs    ,// 目标sd卡的 CS   引脚, 或esp32s3使用SDIO的 DAT3 引脚,
   READGUY_i2c_sda  ,// 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
   READGUY_i2c_scl  ,// 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
   //按键驱动部分, 为负代表高触发, 否则低触发,
@@ -65,7 +65,10 @@ const int8_t ReadguyDriver::config_data[22] = {
   READGUY_bl_pin   ,//前置光接口引脚IO
   READGUY_rtc_type ,//使用的RTC型号(待定, 还没用上)
   0                ,//READGUY_sd_ok   SD卡已经成功初始化
-  0                 //READGUY_buttons 按钮个数, 0-3都有可能
+  0                ,//READGUY_buttons 按钮个数, 0-3都有可能
+  -1, //用户自定义变量 同时用于esp32s3使用SDIO卡数据的DAT1 为-1代表不使用SDIO
+  -1, //用户自定义变量 同时用于esp32s3使用SDIO卡数据的DAT2
+  -1,-1,-1,-1,-1,-1,-1,-1 //user data 区域, 此功能没啥用就暂时全设定为-1了
 };
 #endif
 #ifndef ESP8266
@@ -414,12 +417,14 @@ void ReadguyDriver::setButtonDriver(){
     btn_rd[1].setLongRepeatMode(0);  //双按键 确定按键 设置为不允许连按
   }
   else if(READGUY_buttons==3){
-    btn_rd[0].long_press_ms = 20; //不识别双击三击, 只有按一下或者长按, 并且开启连按
-    //btn_rd[0].setLongRepeatMode(1);
+    btn_rd[0].long_press_ms = 20; //只有长按, 按一下也是长按,
+    btn_rd[0].double_press_ms = 20; //不识别双击三击,
+    btn_rd[0].setLongRepeatMode(1); //并且开启连按
     btn_rd[1].enScanDT(0); //不识别双击或三击(默认)    2024/2/25更新:需要支持连按适配拨轮
     btn_rd[1].setLongRepeatMode(0); //三按键 确定按键 设置为不允许连按
-    btn_rd[2].long_press_ms = 20; //不识别双击三击, 只有按一下或者长按, 并且开启连按
-    btn_rd[2].setLongRepeatMode(1);
+    btn_rd[2].long_press_ms = 20; //只有长按, 按一下也是长按, 并且开启连按
+    btn_rd[2].double_press_ms = 20; //不识别双击三击,
+    btn_rd[2].setLongRepeatMode(1); //并且开启连按
   }
 #ifdef ESP8266 //对于esp8266, 需要注册到ticker. 这是因为没freertos.
   btnTask.attach_ms(BTN_LOOPTASK_DELAY,looptask);
@@ -588,7 +593,7 @@ void ReadguyDriver::nvs_write(){
 }
 #elif (defined(ESP8266))
 void ReadguyDriver::nvs_init(){
-  EEPROM.begin(32);
+  EEPROM.begin(sizeof(config_data)+8+READGUY_ESP8266_EEPROM_OFFSET);
 }
 void ReadguyDriver::nvs_deinit(){
   EEPROM.commit();
@@ -601,7 +606,7 @@ bool ReadguyDriver::nvs_read(){
   sizeof(config_data)+
 #endif
   8;i++){
-    int8_t rd=(int8_t)EEPROM.read(2+i);
+    int8_t rd=(int8_t)EEPROM.read(READGUY_ESP8266_EEPROM_OFFSET+i);
 #ifdef DYNAMIC_PIN_SETTINGS
     if(i>=8) config_data[i-8] = rd;
     else
@@ -613,7 +618,7 @@ bool ReadguyDriver::nvs_read(){
 }
 void ReadguyDriver::nvs_write(){
   for(unsigned int i=0;i<sizeof(config_data)+8;i++){
-    EEPROM.write(2+i,(uint8_t)(i<8?pgm_read_byte(projname+i):config_data[i-8]));
+    EEPROM.write(READGUY_ESP8266_EEPROM_OFFSET+i,(uint8_t)(i<8?pgm_read_byte(projname+i):config_data[i-8]));
   }
 }
 #else

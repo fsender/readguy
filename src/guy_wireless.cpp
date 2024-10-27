@@ -33,10 +33,10 @@
 static const PROGMEM char NOT_SUPPORTED[] = "(不支持此屏幕)";
 static const PROGMEM char TEXT_HTML[] = "text/html";
 static const PROGMEM char TEXT_PLAIN [] = "text/plain";
-static const PROGMEM char args_name[23][8]={
+static const PROGMEM char args_name[24][8]={
   "share","epdtype","EpdMOSI","EpdSCLK","Epd_CS","Epd_DC","Epd_RST","EpdBusy",
   "SD_MISO","SD_MOSI","SD_SCLK","SD_CS","I2C_SDA","I2C_SCL",
-  "btn_cnt","btn1","btn1c","btn2","btn2c","btn3","btn3c","bklight","rtc"
+  "btn_cnt","btn1","btn1c","btn2","btn2c","btn3","btn3c","bklight","rtc","user"
 };
 #ifdef READGUY_DEV_154A
   static const PROGMEM char NAME_guyDev154[]="1.54寸标准";
@@ -300,12 +300,14 @@ void ReadguyDriver::handleInitPost(){
 #endif
   }
   config_data[0]=1; //默认只要运行到此处, 就已经初始化好了的
-  for(int i=0;i<23;i++){
+  for(int i=0;i<33;i++){
     Serial.print(F("Argument "));
-    Serial.print(FPSTR(args_name[i]));
+    String a_name = String(FPSTR(args_name[23])) + (i-22);
+    if(i<=22) a_name = FPSTR(args_name[i]);
+    Serial.print(a_name);
     Serial.write(':');
-    if(sv.hasArg(FPSTR(args_name[i]))) {
-      Serial.println(sv.arg(FPSTR(args_name[i])));
+    if(sv.hasArg(a_name)) {
+      Serial.println(sv.arg(a_name));
       if(i<14){ //这12个引脚是不可以重复的, 如果有重复, config_data[0]设为0
         config_data[i+1] = sv.arg(FPSTR(args_name[i])).toInt();
       }
@@ -318,6 +320,9 @@ void ReadguyDriver::handleInitPost(){
       else if(i==20&&btn_count_>2) config_data[17]=-config_data[17];
       else if(i==21) config_data[18] = sv.arg(FPSTR(args_name[21])).toInt();
       else if(i==22) config_data[19] = sv.arg(FPSTR(args_name[22])).toInt(); //保留RTC功能
+      else if(i>22){ //用户数据
+        config_data[i-1] = sv.arg(a_name).toInt();
+      }
     }
     else {
       Serial.write('\n');
@@ -535,7 +540,7 @@ void ReadguyDriver::handlePinSetup(){
     s += FPSTR(args_name[i+2]);
     s += FPSTR(index_cn_html3);
     s += FPSTR(args_name[i+2]);
-    s += ("\" min=\"-1\" max=\"99\" step=\"1\" value=\"");
+    s += F("\" min=\"-1\" max=\"99\" step=\"1\" value=\"");
     s += (READGUY_cali?(int)config_data[i+3] :-1);
     s += F("\"/>");
   }
@@ -562,6 +567,17 @@ void ReadguyDriver::handlePinSetup(){
     if(i==3) s += (READGUY_cali?(int)READGUY_bl_pin :-1);
     else s += ((READGUY_cali && config_data[15+i])?(int)abs(config_data[15+i])-1:-1);
   }
+  for(int i=0;i<10;i++){
+    s += F("\"/><br/>用户数据 ");
+    s += (i+1);
+    s += F("<input type=\"number\" id=\"user");
+    s += (i+1);
+    s += FPSTR(index_cn_html3);
+    s += ("user");
+    s += (i+1);
+    s += F("\" min=\"-1\" max=\"99\" step=\"1\" value=\"");
+    s += (READGUY_cali?(int)config_data[i+22] :-1);
+  }                   //---------------------------------此部分代码需要配合硬件测试 + 查看网页源代码 才可以实现
   s += FPSTR(index_cn_html16); //s += (READGUY_cali?(int)0        :-1);
   sv.send_P(200, TEXT_HTML, (s+FPSTR(end_html)).c_str());
 }
