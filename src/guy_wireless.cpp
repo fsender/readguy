@@ -732,12 +732,12 @@ const PROGMEM char ReadguyDriver::verify2_html[] =
 "<br/><hr/>完成上述4个操作之后屏幕上将会展现出验证码,输入验证码即可完成硬件配置.<br/></p><form action=\"/fin"
 "al\" method=\"POST\"><input type=\'text\' name=\'t_verify\' maxlength=\"6";
 const PROGMEM char ReadguyDriver::verifybtn_html[3][224] = {
-"一个按键, 功能全保留, 操作可能比较繁琐.<br/>"
-"点按:下一个/向下翻页<br/>双击:确定/选择<br/>三连击:返回/退格<br/>长按半秒:上一个/向上翻页<br/>点按紧接着长按: 特殊操作",
-"两个按键, 操作可以满足需求.<br/>"
-"按键1点按:下一个/向下翻页<br/>按键1长按:上一个/向上翻页<br/>按键2点按:确定/选择<br/>按键2长按:返回/退格<br/>按住按键1点按2:特殊操作",
-"三个按键, 操作非常方便流畅.<br/>"
-"按键1:上一个/向上翻页<br/>按键2点按:确定/选择<br/>按键2长按: 返回/退格<br/>按键3:下一个/向下翻页<br/>双击点按2:切换输入法等特殊操作"
+"一个按键, 功能全保留, 操作可能比较繁琐.<br/>点按:下一个/向下翻页<br/>双击:确定/选择<br/>三连击:返回/退格<br/>"
+"长按半秒:上一个/向上翻页<br/>点按紧接着长按: 特殊操作",
+"两个按键, 操作可以满足需求.<br/>按键1点按:下一个/向下翻页<br/>按键1长按:上一个/向上翻页<br/>按键2点按:确定/选"
+"择<br/>按键2长按:返回/退格<br/>按住按键1点按2:特殊操作",
+"三个按键, 操作非常方便流畅.<br/>按键1:上一个/向上翻页<br/>按键2点按:确定/选择<br/>按键2长按: 返回/退格<br/>按"
+"键3:下一个/向下翻页<br/>双击点按2:切换输入法等特殊操作"
 };
 const PROGMEM char ReadguyDriver::final_html[] =
 "欢迎使用 readguy</title></head><body><h1>readguy ";
@@ -745,7 +745,7 @@ const PROGMEM char ReadguyDriver::afterConfig_html[] =
 "配置完成</h1><p>您已完成了初始化工作.现在可以配置WiFi和天气密钥相关内容.<br/></p>"
 "返回<a href=\"/pinsetup\">引脚设置</a><h3>";
 const PROGMEM char ReadguyDriver::home_html[]=
-"欢迎页面</h1>在这里您可以配置属于应用app的内容. <a href=\"/pinsetup\">重新配置引脚</a><h3>";
+"欢迎页面</h1>在这里您可以配置属于应用app的内容.<h3>";
 /*
 const PROGMEM char ReadguyDriver::final2_html[] =
 "<form action=\"/wifi\" method=\"POST\">WiFi 名称<input type=\'text\' name=\'ssid\' "
@@ -754,9 +754,9 @@ const PROGMEM char ReadguyDriver::final2_html[] =
 "钥<input type=\'text\' name=\'psk\' maxlength=\"63";
 */
 const PROGMEM char ReadguyDriver::end_html[] = 
-"<p>ReadGuy on device " _READGUY_PLATFORM "<br/>Copyright © FriendshipEnder <a href=\""
-_GITHUB_LINK "\">GitHub</a> <a href=\"" _BILIBILI_LINK "\">Bilibili</"
-"a><br/>版本: " READGUY_VERSION " ,编译日期: " __DATE__ " " __TIME__ "</p></body></html>";
+"<p>ReadGuy on device " _READGUY_PLATFORM " <a href=\"/pinsetup\">重新配置引脚</a> <a href=\"/update\">固件更新"
+"</a><br/>Copyright © FriendshipEnder <a href=\"" _GITHUB_LINK "\">GitHub</a> <a href=\"" _BILIBILI_LINK "\">"
+"Bilibili</a><br/>版本: " READGUY_VERSION " ,编译日期: " __DATE__ " " __TIME__ "</p></body></html>";
 /*const PROGMEM uint8_t ReadguyDriver::faviconData[1150]={
   0x0,0x0,0x1,0x0,0x1,0x0,0x10,0x10,0x0,0x0,0x1,0x0,0x20,0x0,0x68,0x4,0x0,0x0,0x16,0x0,0x0,0x0,0x28,0x0,
   0x0,0x0,0x10,0x0,0x0,0x0,0x20,0x0,0x0,0x0,0x1,0x0,0x20,0x0,0x0,0x0,0x0,0x0,0x40,0x4,0x0,0x0,0x0,0x0,

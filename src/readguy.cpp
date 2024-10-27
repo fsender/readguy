@@ -79,6 +79,7 @@ TaskHandle_t ReadguyDriver::btn_handle;
 
 ReadguyDriver::ReadguyDriver(){
   READGUY_cali = 0; // config_data[0] 的初始值为0
+  for(unsigned int i=1;i<sizeof(config_data);i++) config_data[i] = -1;
   READGUY_sd_ok = 0; //初始默认SD卡未成功初始化
   READGUY_buttons = 0; //初始情况下没有按钮
 } //WiFiSet: 是否保持AP服务器一直处于打开状态

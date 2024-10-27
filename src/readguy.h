@@ -449,19 +449,28 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     constexpr int getReadguy_user8 () const { return READGUY_user8; } //用户变量
     constexpr int getReadguy_user9 () const { return READGUY_user9; } //用户变量
     constexpr int getReadguy_user10() const { return READGUY_user10;} //用户变量
-    constexpr int getReadguyUseSdio () { //返回程序调用SD卡时 是否使用了SDIO
-#ifdef CONFIG_IDF_TARGET_ESP32S3         //仅对ESP32S3可用
+    constexpr int getReadguyUseSdio() const { //返回程序调用SD卡时 是否使用了SDIO
+#ifdef CONFIG_IDF_TARGET_ESP32S3              //仅对ESP32S3可用
       return (READGUY_user1 != -1) && (READGUY_user2 != -1);
 #else
-      return 0;                          //非ESP32S3平台不可用SDIO
+      return 0;                               //非ESP32S3平台不可用SDIO
 #endif
     } //用于esp32s3使用SDIO卡数据的DAT2
-    constexpr int getSdio_dat0 () { return getReadguyUseSdio()?READGUY_sd_miso:-1; } //用于esp32s3使用SDIO卡数据的DAT0
-    constexpr int getSdio_dat1 () { return getReadguyUseSdio()?READGUY_user1:-1; } //用于esp32s3使用SDIO卡数据的DAT1
-    constexpr int getSdio_dat2 () { return getReadguyUseSdio()?READGUY_user2:-1; } //用于esp32s3使用SDIO卡数据的DAT2
-    constexpr int getSdio_dat3 () { return getReadguyUseSdio()?READGUY_sd_cs:-1; } //用于esp32s3使用SDIO卡数据的DAT3
-    constexpr int getSdio_clk  () { return getReadguyUseSdio()?READGUY_sd_sclk:-1; } //用于esp32s3使用SDIO卡数据的CLK
-    constexpr int getSdio_cmd  () { return getReadguyUseSdio()?READGUY_sd_mosi:-1; } //用于esp32s3使用SDIO卡数据的CMD
+#ifdef CONFIG_IDF_TARGET_ESP32S3              //仅对ESP32S3可用
+    constexpr int getSdio_dat0 () const { return getReadguyUseSdio()?READGUY_sd_miso:-1; } //用于esp32s3使用SDIO卡数据的DAT0
+    constexpr int getSdio_dat1 () const { return getReadguyUseSdio()?READGUY_user1  :-1; } //用于esp32s3使用SDIO卡数据的DAT1
+    constexpr int getSdio_dat2 () const { return getReadguyUseSdio()?READGUY_user2  :-1; } //用于esp32s3使用SDIO卡数据的DAT2
+    constexpr int getSdio_dat3 () const { return getReadguyUseSdio()?READGUY_sd_cs  :-1; } //用于esp32s3使用SDIO卡数据的DAT3
+    constexpr int getSdio_clk  () const { return getReadguyUseSdio()?READGUY_sd_sclk:-1; } //用于esp32s3使用SDIO卡数据的CLK
+    constexpr int getSdio_cmd  () const { return getReadguyUseSdio()?READGUY_sd_mosi:-1; } //用于esp32s3使用SDIO卡数据的CMD
+#else
+    constexpr int getSdio_dat0 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT0
+    constexpr int getSdio_dat1 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT1
+    constexpr int getSdio_dat2 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT2
+    constexpr int getSdio_dat3 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT3
+    constexpr int getSdio_clk  () const { return -1; } //用于esp32s3使用SDIO卡数据的CLK
+    constexpr int getSdio_cmd  () const { return -1; } //用于esp32s3使用SDIO卡数据的CMD
+#endif
     //constexpr int memWidth   () const { return guy_width ;  } //返回显存宽度(不是画幅宽度),不会随着画布旋转改变
     //constexpr int memHeight  () const { return guy_height ; } //返回显存高度(不是画幅高度),不会随着画布旋转改变
     int drvWidth () const { return READGUY_cali==127?guy_dev->drv_width():0;  } //返回显示屏硬件宽度(不是画幅宽度)
