@@ -1,3 +1,49 @@
+## Release 1.4.0
+
+### 新增内容
+
+1. 新增用户引脚配置数据字段的读取和写入接口
+
+2. 附加了时间管理库, 位于 `extra/ctg_timelib` 文件夹内. 本库可用于替代 [Arduino TimeLib](https://github.com/PaulStoffregen/Time), 使ESPxxxx系列主控可以与GNU C time库使用同一个时间访问接口, 并显著减小代码体积.
+
+3. 新增 `getDepth` 函数, 用于获得当前墨水屏的显示颜色深度
+
+4. 新增 `setAutoFullRefresh` 函数, 可用于设置自动慢刷, 防止连续快刷导致屏幕对比度降低甚至刷坏屏幕
+
+5. 新增 `screenshot` 函数, 可截屏并保存在SD卡中.
+
+6. 新增 `SDdeinit` 函数, 调用后SD卡将会不可用, 用于安全卸载SD卡或者重新检测SD卡的可用性.
+
+7. 新增 `recoverI2C` 函数, 在I2C引脚被复用的情形下, 使用I2C功能会影响其他引脚的复用功能. 该函数可以在I2C用完之后还原这些复用引脚的功能设置
+
+8. 新增 `setSDbusy` 函数, 在SD卡的CS引脚被复用作按键时, 调用 `setSDbusy(1)` 标记此时SD卡正在被占用, `setSDbusy(0)` 来释放. **该函数仅建议在需要兼容SD卡被复用作按键的硬件上使用. 其他情况用处不大. 前往** `guy_driver_config.h` **文件并禁用宏** `READGUY_ALLOW_SDCS_AS_BUTTON` **是最佳选择**
+
+9. 新增实验性功能 `READGUY_ALLOW_DC_AS_BUTTON`, `READGUY_ALLOW_EPDCS_AS_BUTTON`, `READGUY_ALLOW_SDCS_AS_BUTTON`, 详见文件 `guy_driver_config.h` .
+
+10. 内置服务器功能现在支持设置请求类型为 UPLOAD, HEAD, POST, PUT, PATCH, DELETE 和 OPTIONS 的服务函数, 以及请求返回 404 Not Found 的响应.
+
+### 优化
+
+1. 优化了大部分代码结构 (给一些函数加上const和inline标志, 提高效率) , 并修复了部分变量未初始化就调用的bug
+
+2. 优化了配置网页的结构, 现在配置引脚的按钮在网页最下方了
+
+3. 优化部分示例程序, 增加并更新部分注释, 更易读 更易用
+
+4. 完全移除了内部对 RTC 的支持.
+
+5. 为 1.54 寸 LilyGo 屏幕, 2.9 寸前置光屏幕和 2.7 寸屏幕提供了睡眠模式下快速唤醒的支持.
+
+6. 为 LCD 墨水屏模拟器提供了快速但不支持同屏灰度的模拟模式.
+
+### Bug 修复
+
+1. 修复在禁用 dynamic_pin_settings 时, 数组访问越界的bug
+
+2. 修复了禁用 WiFi 功能但未配置引脚时, 程序会异常继续运行的bug
+
+3. 按键任务函数结构重构, 解决了按键被复用时, 无法设置按键为高电平触发的情况
+
 ## Release 1.3.7 - 2024/3/11
 
 1. 配网页面, 增加了用户引脚数据 (可以配置其他功能的引脚. 此功能似乎是为了准备给esp32s3用sdmmc库驱动sd卡用的)

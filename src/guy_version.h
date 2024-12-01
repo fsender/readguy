@@ -40,10 +40,10 @@
 //务必保证这些版本号是一致的.
 //另外, 在提交新版本之前, 不要忘记在github上创建release, 否则Arduino IDE会读不到
 #define READGUY_V_MAJOR 1
-#define READGUY_V_MINOR 3
-#define READGUY_V_PATCH 7
+#define READGUY_V_MINOR 4
+#define READGUY_V_PATCH 0
 #define READGUY_VERSION_VAL (READGUY_V_MAJOR*1000+READGUY_V_MINOR*100+READGUY_V_PATCH*10)
-#define READGUY_VERSION "1.3.7"
+#define READGUY_VERSION "1.4.0"
 
 #ifdef ESP8266
 #define _READGUY_PLATFORM "ESP8266"
@@ -61,8 +61,8 @@
 #endif
 #endif
 
-#define _GITHUB_LINK      "github.com/fsender/readguy"
-#define _BILIBILI_LINK    "www.bilibili.com/video/BV1f94y187wz"
+#define _GITHUB_LINK      "https://github.com/fsender/readguy"
+#define _BILIBILI_LINK    "https://www.bilibili.com/video/BV1f94y187wz"
 
 
 #endif /* END OF FILE. ReadGuy project.

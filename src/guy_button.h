@@ -109,7 +109,7 @@ class guy_button{
     bool pressed_triggered = false;
     bool trig_mode = false; //长按连按触发模式
 
-    typedef uint8_t (*std_U8_function_U8)(uint8_t);
+    typedef uint8_t (*std_U8_function_U8)(uint8_t, bool);
     std_U8_function_U8 get_state_cb = NULL;
 
   public:
@@ -118,7 +118,7 @@ class guy_button{
     /// @param _pin 引脚ID. 传入的引脚在内部将会使用digitalRead函数实现
     /// @param activeLow 设置为true时, 当读取到低电平视为按下
     void begin(uint8_t _pin, bool activeLow = true){
-      begin(_pin,[](uint8_t p)->uint8_t { return digitalRead(p); },activeLow);
+      begin(_pin,[](uint8_t p, bool)->uint8_t { return digitalRead(p); },activeLow);
     }
     /// @brief 初始化
     /// @param _pin 引脚ID. 传入的引脚在内部将会使用digitalRead函数实现

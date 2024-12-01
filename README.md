@@ -4,11 +4,9 @@
 
 <img src="extra/artset/readguy_theme3.png" width="30%" height="auto">
 
-**版本1.3.7正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
+**版本1.4,0正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
 
 **即将发布7个全新的屏幕驱动: 欢迎支持! (详见后面的驱动表格)**
-
-**发布好的全新驱动程序版本号将会是2.0.0!**
 
 欢迎克隆, 项目交流QQ群: 926824162 (萌新可以进来问问题的哟), 项目的 Bilibili 主页: [BV1f94y187wz](https://www.bilibili.com/video/BV1f94y187wz/) 记得三连+关注我这个宝藏up主哦~
 
@@ -253,17 +251,20 @@ firmware.bin              0x10000
 
 menuconfig 内容:
 
-```
+``` ini
 FREERTOS_HZ = 1000
 ESP32_DEFAULT_CPU_FREQ_MHZ = 240
 ESP32_BROWNOUT_DET_LVL = 0
 ESP_PHY_REDUCE_TX_POWER=y
 FATFS_API_ENCODING_UTF_8 = true
+; SDK_TOOLCHAIN_SUPPORTS_TIME_WIDE_64_BITS = true
+; SPI_MASTER_IN_IRAM = true      ; 该选项能提高SPI传输速率
+; SPI_MASTER_ISR_IN_IRAM = true
 ```
 
 ---
 
-Copyright © 2022-2023 FriendshipEnder. All Rights reserved.
+Copyright © 2022-2025 FriendshipEnder. All Rights reserved.
 
 版权声明：需要经过作者@friendshipender的许可才能商用。 可以联系邮箱playyinzhe@qq.com询问商用事宜
 

@@ -28,11 +28,20 @@
  */
 
 #include "readguy.h"
+/* #if (!defined(ESP8266)) //for ESP32, ESP32S2, ESP32S3, ESP32C3
+#include "esp_flash.h"
+#endif */
 
 #ifdef READGUY_ESP_ENABLE_WIFI
 static const PROGMEM char NOT_SUPPORTED[] = "(不支持此屏幕)";
 static const PROGMEM char TEXT_HTML[] = "text/html";
 static const PROGMEM char TEXT_PLAIN [] = "text/plain";
+static const PROGMEM char text_http_methods[8][8]={
+  "UPLOAD", "404", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+};
+static const HTTPMethod val_http_methods[6]={
+  HTTP_HEAD, HTTP_POST, HTTP_PUT, HTTP_PATCH, HTTP_DELETE, HTTP_OPTIONS
+};
 static const PROGMEM char args_name[24][8]={
   "share","epdtype","EpdMOSI","EpdSCLK","Epd_CS","Epd_DC","Epd_RST","EpdBusy",
   "SD_MISO","SD_MOSI","SD_SCLK","SD_CS","I2C_SDA","I2C_SCL",
@@ -187,7 +196,9 @@ void ReadguyDriver::ap_setup(const char *ssid, const char *pass, int m){
   IPAddress subnet(255,255,255,0);
   WiFi.softAPConfig(local_IP, gateway, subnet);
   WiFi.softAP(ssid,pass);
+#ifdef READGUY_SERIAL_DEBUG
   Serial.printf_P(PSTR("[Guy AP] ap_setup SSID: %s, Pass: %s\n"),ssid,pass);
+#endif
 }
 void ReadguyDriver::server_setup(const String &notify, const serveFunc *serveFuncs, int funcs){
   //启动WiFi服务器端, 这样就可以进行配网工作
@@ -198,6 +209,7 @@ void ReadguyDriver::server_setup(const String &notify, const serveFunc *serveFun
   sv.on("/pinsetup", HTTP_GET,  std::bind(&ReadguyDriver::handlePinSetup ,this));
   sv.on("/final",    HTTP_POST, std::bind(&ReadguyDriver::handleFinalPost,this)); //此时验证已经正确
   //sv.on("/wifi",     HTTP_GET,  std::bind(&ReadguyDriver::handleWiFi     ,this)); //此时验证已经正确
+  sv.onNotFound(std::bind(&ReadguyDriver::handleNotFound,this)); //处理404的情况
   guy_notify=notify;
   sfuncs=funcs; //设置服务函数列表
   if(sfnames!=nullptr) { delete [] sfnames; delete [] sfevents; } //严防内存泄露
@@ -205,7 +217,14 @@ void ReadguyDriver::server_setup(const String &notify, const serveFunc *serveFun
     sfnames=new String[sfuncs];
     sfevents=new String[sfuncs];
     for(int i=0;i<sfuncs;i++){   //set-up 第三方库内容, 初始化后即可使用
-      sv.on(serveFuncs[i].event,HTTP_GET,std::bind(serveFuncs[i].func,&sv));
+      int spec = -1;
+      for(int ij=0;ij<8;ij++){   //处理一些HTTP不同类型请求.
+        if(!strcmp_P(serveFuncs[i].linkname.c_str(),text_http_methods[ij])) spec = ij;
+      }
+      if(spec>1) sv.on(serveFuncs[i].event,val_http_methods[spec-2],std::bind(serveFuncs[i].func,&sv));
+      else if(spec==1) sv.onNotFound(std::bind(serveFuncs[i].func,&sv)); //404
+      else if(spec==0) sv.onFileUpload(std::bind(serveFuncs[i].func,&sv)); //文件上传
+      else sv.on(serveFuncs[i].event,HTTP_GET,std::bind(serveFuncs[i].func,&sv));
       sfnames[i]  = serveFuncs[i].linkname;
       sfevents[i] = serveFuncs[i].event;
     }
@@ -220,13 +239,14 @@ void ReadguyDriver::server_setup(const String &notify, const serveFunc *serveFun
                              "Connection: close\r\n\r\n"),89);
     sv.client().write_P((const char *)faviconData,sizeof(faviconData));
   });*/
-  sv.onNotFound(std::bind(&ReadguyDriver::handleNotFound,this)); //处理404的情况
   sv.begin();   
   MDNS.begin("readguy");
   //MDNS.addService("http","tcp",80);
+#ifdef READGUY_SERIAL_DEBUG
   Serial.print(F("[Guy server] Done! visit "));
   if(WiFi.getMode() == WIFI_AP) Serial.println(F("192.168.4.1"));
   else Serial.println(WiFi.localIP());
+#endif
 }
 bool ReadguyDriver::server_loop(){ //此时等待网页操作完成响应...
   sv.handleClient();
@@ -251,10 +271,16 @@ bool ReadguyDriver::server_loop(){ //此时等待网页操作完成响应...
       refFlag=3;
     }
     if(refFlag!=127) {
-      Serial.printf("randch: %d %c\n",randomch[refFlag],(char)(randomch[refFlag]));
+#ifdef READGUY_SERIAL_DEBUG
+      Serial.printf_P(PSTR("randch: %d %c\n"),randomch[refFlag],(char)(randomch[refFlag]));
+#endif
       drawChar((guy_dev->drv_width()>>1)-46+refFlag*24,(guy_dev->drv_height()>>1)-14,randomch[refFlag],true,false,4);
+      refresh_begin(0);
       guy_dev->drv_fullpart(1);
       guy_dev->_display((const uint8_t*)getBuffer());
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+      refresh_end();
+#endif
     }
   }
   delay(1); //防止触发看门狗
@@ -279,7 +305,9 @@ void ReadguyDriver::handleInitPost(){
   // 此时返回一个文本输入框, 定位到 handleFinalPost 函数
   uint8_t btn_count_=0;
   if(READGUY_cali){ //再次初始化已经初始化的东西, 此时需要关闭一些外设什么的
+#ifdef READGUY_SERIAL_DEBUG
     Serial.println(F("[Guy Pin] Reconfig pins and hardwares..."));
+#endif
     READGUY_cali=0;
     READGUY_sd_ok=0;
 #if defined(ESP8266)
@@ -301,13 +329,19 @@ void ReadguyDriver::handleInitPost(){
   }
   config_data[0]=1; //默认只要运行到此处, 就已经初始化好了的
   for(int i=0;i<33;i++){
+#ifdef READGUY_SERIAL_DEBUG
     Serial.print(F("Argument "));
+#endif
     String a_name = String(FPSTR(args_name[23])) + (i-22);
     if(i<=22) a_name = FPSTR(args_name[i]);
+#ifdef READGUY_SERIAL_DEBUG
     Serial.print(a_name);
     Serial.write(':');
+#endif
     if(sv.hasArg(a_name)) {
+#ifdef READGUY_SERIAL_DEBUG
       Serial.println(sv.arg(a_name));
+#endif
       if(i<14){ //这12个引脚是不可以重复的, 如果有重复, config_data[0]设为0
         config_data[i+1] = sv.arg(FPSTR(args_name[i])).toInt();
       }
@@ -319,13 +353,15 @@ void ReadguyDriver::handleInitPost(){
       else if(i==19&&btn_count_>2) config_data[17]=sv.arg(FPSTR(args_name[19])).toInt()+1;
       else if(i==20&&btn_count_>2) config_data[17]=-config_data[17];
       else if(i==21) config_data[18] = sv.arg(FPSTR(args_name[21])).toInt();
-      else if(i==22) config_data[19] = sv.arg(FPSTR(args_name[22])).toInt(); //保留RTC功能
+      else if(i==22) config_data[19] = sv.arg(FPSTR(args_name[22])).toInt(); //现已弃用 RTC 功能.
       else if(i>22){ //用户数据
         config_data[i-1] = sv.arg(a_name).toInt();
       }
     }
     else {
+#ifdef READGUY_SERIAL_DEBUG
       Serial.write('\n');
+#endif
       if(i==0) READGUY_shareSpi = 0; //有的html响应是没有的.共享SPI默认值为true.
       else if(i<14) config_data[i+1] = -1;//这12个引脚是不可以重复的, 如果有重复, config_data[0]设为0
     }
@@ -350,7 +386,9 @@ void ReadguyDriver::handleInitPost(){
   uint8_t ck=checkEpdDriver();
   if(btn_count_<2) config_data[16]=0;
   if(btn_count_<3) config_data[17]=0;
+#ifdef READGUY_SERIAL_DEBUG
   Serial.println(F("[Guy Pin] Config OK. Now init devices."));
+#endif
   if(ck>=125) {
     const char *pNotify[3]={ PSTR("Necessary pin NOT connected."),\
     PSTR("Pin conflicted."),PSTR("Display not supported.") };
@@ -374,12 +412,16 @@ void ReadguyDriver::handleInitPost(){
   randomch[1] = 48+((rdm>>12)%10);//R2CHAR((rdm>>12)%10);
   randomch[2] = 48+((rdm>> 6)%10);//R2CHAR((rdm>> 6)%10);
   randomch[3] = 48+((rdm    )%10);//R2CHAR((rdm    )%10);
+#ifdef READGUY_SERIAL_DEBUG
   Serial.print(F("[Guy] rand string: "));
   for(int i=0;i<4;i++) Serial.write(randomch[i]);
   Serial.write('\n');
   Serial.println(F("[Guy] Init EPD..."));  //此时引脚io数据已经录入, 如果没有问题, 此处屏幕应当可以显示
+#endif
   setEpdDriver(); //尝试初始化屏幕
+#ifdef READGUY_SERIAL_DEBUG
   Serial.println(F("[Guy] Init details..."));
+#endif
   setTextSize(1);
   drawCenterString(setSDcardDriver()?"SD Init OK!":"SD Init failed!",
     guy_dev->drv_width()>>1,(guy_dev->drv_height()>>1)+20);
@@ -389,11 +431,15 @@ void ReadguyDriver::handleInitPost(){
   drawRect((guy_dev->drv_width()>>1)-46+24,(guy_dev->drv_height()>>1)-14,20,28,0);
   drawRect((guy_dev->drv_width()>>1)-46+48,(guy_dev->drv_height()>>1)-14,20,28,0);
   drawRect((guy_dev->drv_width()>>1)-46+72,(guy_dev->drv_height()>>1)-14,20,28,0);
-  spibz++;
+  refresh_begin(0);
   guy_dev->drv_fullpart(1);
   guy_dev->_display((const uint8_t*)getBuffer());
-  spibz--;
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+  refresh_end();
+#endif
+#ifdef READGUY_SERIAL_DEBUG
   Serial.println(F("[Guy] Display done!"));
+#endif
   READGUY_cali=1; //显示初始化完成
 }
 void ReadguyDriver::handlePinSetup(){
@@ -408,7 +454,7 @@ void ReadguyDriver::handlePinSetup(){
     args_name[15],args_name[17],args_name[19],args_name[21],args_name[12],args_name[13]
   };
   static const PROGMEM int dem_args_val[DRIVER_TEMPLATE_N][DRIVER_TEMPLATE_ARRAY_L]={
-    { 6,15, 0, 2, 4, 5, 2, 0, 3,-1,-1,13,14},
+    { 6,15, 0, 2, 4, 5, 2, 3, 0,-1,-1,13,14},
     //{ 0,10, 9, 8, 7, 4, 3, 2, 3, 5, 6,SDA,SCL},
     //{ 0,15, 4, 2, 5,-1, 1, 0,-1,-1,-1,-1,-1} //微雪官方例程板子不支持SD卡, 也不支持I2C. 按钮为boot按钮
   };
@@ -593,7 +639,12 @@ void ReadguyDriver::handleFinal(){
   s += F("</h3><hr/>");
   if(sfuncs>0){
     s+=F("以下链接来自<b>应用程序</b><br/>"); //换行
-    for(int i=0;i<sfuncs && sfnames[i]!=emptyString;i++){
+    for(int i=0;i<sfuncs;i++){
+      int spec = -1;
+      for(int ij=0;ij<8;ij++){
+        if(!strcmp_P(sfnames[i].c_str(),text_http_methods[ij])) spec = ij;
+      }
+      if(spec != -1 || sfnames[i]==emptyString) continue;
       s+=F("<a href=\"");
       s+=sfevents[i];
       s+=F("\">");
@@ -635,7 +686,7 @@ void ReadguyDriver::handleFinal(){
 #endif
 #endif
   s+=F("当前WiFi模式: ");
-  s+=(WiFi.getMode()==WIFI_STA)?F("正常联网模式"):F("AP配网模式");
+  s+=(WiFi.getMode()==WIFI_AP_STA)?F("热点联网模式"):((WiFi.getMode()==WIFI_STA)?F("正常联网模式"):F("热点配置模式"));
   s+=F(", IP地址: ");
   s+=WiFi.localIP().toString();
   s+=F("<br/>芯片型号: ");
@@ -682,7 +733,9 @@ void ReadguyDriver::handleFinal(){
   //s+=F("<br/>"); //换行 
   sv.send_P(200, TEXT_HTML, (s+FPSTR(end_html)).c_str());
   if(READGUY_cali == 63){
+#ifdef READGUY_SERIAL_DEBUG
     Serial.println(F("[Guy NVS] Data saved to NVS."));
+#endif
     READGUY_cali = 127;
     nvs_init();
     nvs_write();

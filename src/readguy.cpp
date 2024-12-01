@@ -28,12 +28,26 @@
  */
 
 #include "readguy.h"
-#if (!defined(INPUT_PULLDOWN))
+/* #if (!defined(ESP8266)) //for ESP32, ESP32S2, ESP32S3, ESP32C3
+#include "esp32-hal.h"
+#endif */
+#if (!defined(INPUT_PULLDOWN)) //not supported pinMode
 #define INPUT_PULLDOWN INPUT
 #endif
 
 guy_button ReadguyDriver::btn_rd[3];
-int8_t ReadguyDriver::pin_cmx=-1;
+int8_t     ReadguyDriver::pin_cmx=-1;
+#ifdef READGUY_ALLOW_DC_AS_BUTTON
+bool       ReadguyDriver::refresh_state=1; //1: free; 0: busy(refreshing)
+uint8_t    ReadguyDriver::refresh_press=0x7f; //0x7f: no button pressed other:button pressed pin
+#endif
+#ifdef READGUY_ALLOW_EPDCS_AS_BUTTON
+uint8_t    ReadguyDriver::static_epd_cs=0x7f;
+#endif
+#ifdef READGUY_ALLOW_SDCS_AS_BUTTON
+uint8_t    ReadguyDriver::static_sd_cs=0x7f;
+volatile uint8_t ReadguyDriver::sd_cs_busy=0;
+#endif
 
 const PROGMEM char ReadguyDriver::projname[8] = "readguy";
 const PROGMEM char ReadguyDriver::tagname[7] = "hwconf";
@@ -63,7 +77,7 @@ const int8_t ReadguyDriver::config_data[32] = {
   READGUY_btn2     , 
   READGUY_btn3     , 
   READGUY_bl_pin   ,//前置光接口引脚IO
-  READGUY_rtc_type ,//使用的RTC型号(待定, 还没用上)
+  READGUY_rtc_type ,//使用的RTC型号. 现已弃用 RTC 功能. 保留是为了兼容性 让代码更简单维护
   0                ,//READGUY_sd_ok   SD卡已经成功初始化
   0                ,//READGUY_buttons 按钮个数, 0-3都有可能
   -1, //用户自定义变量 同时用于esp32s3使用SDIO卡数据的DAT1 为-1代表不使用SDIO
@@ -79,16 +93,18 @@ TaskHandle_t ReadguyDriver::btn_handle;
 
 ReadguyDriver::ReadguyDriver(){
   READGUY_cali = 0; // config_data[0] 的初始值为0
+#ifdef DYNAMIC_PIN_SETTINGS
   for(unsigned int i=1;i<sizeof(config_data);i++) config_data[i] = -1;
+#endif
   READGUY_sd_ok = 0; //初始默认SD卡未成功初始化
   READGUY_buttons = 0; //初始情况下没有按钮
 } //WiFiSet: 是否保持AP服务器一直处于打开状态
 uint8_t ReadguyDriver::init(uint8_t WiFiSet, bool initepd, bool initSD){
   if(READGUY_cali==127) //已经初始化过了一次了, 为了防止里面一些volatile的东西出现问题....还是退出吧
-    return 0;
+    return READGUY_sd_ok;
 #ifdef DYNAMIC_PIN_SETTINGS
   nvs_init();
-#if (!defined(INDEV_DEBUG))
+#if (!defined(READGUY_INDEV_DEBUG))
   if(!nvs_read()){  //如果NVS没有录入数据, 需要打开WiFiAP模式初始化录入引脚数据
 #endif
 #ifdef READGUY_ESP_ENABLE_WIFI
@@ -105,12 +121,24 @@ uint8_t ReadguyDriver::init(uint8_t WiFiSet, bool initepd, bool initSD){
     server_end();
     if(!WiFiSet) WiFi.mode(WIFI_OFF);
     fillScreen(1);
+#else //DYNAMIC_PIN_SETTINGS 已定义 and READGUY_ESP_ENABLE_WIFI 已定义 but NVS无数据, 此时无法配置引脚. 视为halt
+    (void)WiFiSet; //avoid warning
+    nvs_deinit(); //invalid
+    Serial.printf_P(PSTR("[Guy NVS] INVALID pin settings on " _READGUY_PLATFORM " (Readguy lib version " READGUY_VERSION ")!\n"\
+    "Please open guy_driver_config.h and uncomment #define READGUY_ESP_ENABLE_WIFI!\n"\
+    "You can also flash example binary with Wi-Fi, configure pins and re-flash this program.\n"\
+    "System will restart in 5 seconds..."));
+    delay(5000);
+    ESP.restart();
 #endif
-#if (!defined(INDEV_DEBUG))
+#if (!defined(READGUY_INDEV_DEBUG))
   }
   else{ //看来NVS有数据, //从NVS加载数据, 哪怕前面的数据刚刚写入, 还没读取
+#ifdef READGUY_ESP_ENABLE_WIFI
     if(WiFiSet>=2) WiFi.begin(); //连接到上次存储在flash NVS中的WiFi.
-    else if(WiFiSet==1) ap_setup();
+    else
+#endif
+    if(WiFiSet==1) ap_setup();
     if(checkEpdDriver()!=127) setEpdDriver(initepd/* ,g_width,g_height */);  //初始化屏幕
     else for(;;); //此处可能添加程序rollback等功能操作(比如返回加载上一个程序)
     if(initSD) setSDcardDriver();
@@ -119,6 +147,7 @@ uint8_t ReadguyDriver::init(uint8_t WiFiSet, bool initepd, bool initSD){
 #endif
   nvs_deinit();
 #else
+  (void)WiFiSet; //avoid warning
   nvs_init();
   if(checkEpdDriver()!=127) setEpdDriver(initepd/* ,g_width,g_height */);  //初始化屏幕
   else for(;;); //此处可能添加程序rollback等功能操作(比如返回加载上一个程序)
@@ -129,7 +158,9 @@ uint8_t ReadguyDriver::init(uint8_t WiFiSet, bool initepd, bool initSD){
   }
   nvs_deinit();
 #endif
+#ifdef READGUY_SERIAL_DEBUG
   Serial.println(F("[Guy init] init done."));
+#endif
   READGUY_cali=127;
   return READGUY_sd_ok;
 }
@@ -140,7 +171,9 @@ uint8_t ReadguyDriver::checkEpdDriver(){
 #else 
 #define TEST_ONLY_VALUE 3
 #endif
+#ifdef READGUY_SERIAL_DEBUG
   Serial.printf_P(PSTR("[Guy SPI] shareSpi? %d\n"),READGUY_shareSpi);
+#endif
   for(int i=TEST_ONLY_VALUE;i<8;i++){
     if(i<7 && config_data[i]<0) return 125;//必要的引脚没连接
     for(int j=1;j<=8-i;j++)
@@ -218,7 +251,9 @@ uint8_t ReadguyDriver::checkEpdDriver(){
 #endif
   //添加新屏幕型号 add displays here
     default: 
-      Serial.println(F("[GUY ERR] EPD DRIVER IC NOT SUPPORTED!\n"));
+#ifdef READGUY_SERIAL_DEBUG
+      Serial.println(F("[Guy Error] EPD DRIVER IC NOT SUPPORTED!\n"));
+#endif
       return 127;
   }
 #else
@@ -285,7 +320,9 @@ uint8_t ReadguyDriver::checkEpdDriver(){
   epd_spi->begin(READGUY_epd_sclk,READGUY_shareSpi?READGUY_sd_miso:-1,READGUY_epd_mosi);
   guy_dev->IfInit(*epd_spi, READGUY_epd_cs, READGUY_epd_dc, READGUY_epd_rst, READGUY_epd_busy);
 #endif
+#ifdef READGUY_SERIAL_DEBUG
   Serial.println(F("[Guy SPI] drvBase Init OK"));
+#endif
   return READGUY_epd_type;
 }
 void ReadguyDriver::setEpdDriver(bool initepd, bool initGFX){
@@ -311,7 +348,9 @@ void ReadguyDriver::setEpdDriver(bool initepd, bool initGFX){
     setTextColor(0);
     fillScreen(1); //开始先全屏白色
   }
+#ifdef READGUY_SERIAL_DEBUG
   Serial.printf_P(PSTR("[Guy EPD] EPD init OK(%d): w: %d, h: %d\n"),guy_dev->drv_ID(),guy_dev->drv_width(),guy_dev->drv_height());
+#endif
 }
 #ifdef READGUY_ENABLE_SD
 bool ReadguyDriver::setSDcardDriver(){
@@ -326,8 +365,11 @@ bool ReadguyDriver::setSDcardDriver(){
 #endif
   && READGUY_sd_cs!=READGUY_epd_cs && READGUY_sd_cs!=READGUY_epd_dc && READGUY_sd_cs!=READGUY_epd_rst && READGUY_sd_cs!=READGUY_epd_busy
   ){ //SD卡的CS检测程序和按键检测程序冲突, 故删掉 (可能引发引脚无冲突但是显示冲突的bug)
-#if defined(ESP8266)
-    //Esp8266无视SPI的设定, 固定为唯一的硬件SPI (D5=SCK, D6=MISO, D7=MOSI)
+#if (defined(READGUY_ALLOW_SDCS_AS_BUTTON))
+    setSDbusy(1);
+#endif
+#if defined(ESP8266) //Esp8266无视SPI的设定, 固定为唯一的硬件SPI (D5=SCK, D6=MISO, D7=MOSI)
+    SDFS.end();
     SDFS.setConfig(SDFSConfig(READGUY_sd_cs));
     READGUY_sd_ok = SDFS.begin();
 #else
@@ -341,10 +383,15 @@ bool ReadguyDriver::setSDcardDriver(){
     }
     READGUY_sd_ok = SD.begin(READGUY_sd_cs,*sd_spi,ESP32_SD_SPI_FREQUENCY); //初始化频率为20MHz
 #endif
+#if (defined(READGUY_ALLOW_SDCS_AS_BUTTON))
+    setSDbusy(0);
+#endif
   }
   else READGUY_sd_ok=0; //引脚不符合规则,或冲突或不可用
   if(!READGUY_sd_ok){
+#ifdef READGUY_SERIAL_DEBUG
     Serial.println(F("[Guy SD] SD Init Failed!"));
+#endif
     //guyFS().begin(); //初始化内部FS
 #ifdef READGUY_USE_LITTLEFS
     LittleFS.begin();
@@ -367,7 +414,7 @@ bool ReadguyDriver::setSDcardDriver(){
 #endif
 void ReadguyDriver::setButtonDriver(){
   if(READGUY_btn1) { //初始化按键. 注意高电平触发的引脚在初始化时要设置为下拉
-    int8_t btn_pin=abs(READGUY_btn1)-1;
+    int8_t btn_pin=abs((int)READGUY_btn1)-1;
 #if defined(ESP8266) //只有ESP8266是支持16引脚pulldown功能的, 而不支持pullup
     if(btn_pin == 16) pinMode(16,(READGUY_btn1>0)?INPUT:INPUT_PULLDOWN_16);
     else if(btn_pin < 16 && btn_pin != D5 && btn_pin != D6 && btn_pin != D7)
@@ -404,6 +451,16 @@ void ReadguyDriver::setButtonDriver(){
   || abs(READGUY_btn3)-1==READGUY_epd_dc ) {
     pin_cmx=READGUY_epd_dc; //DC引脚复用
   }
+#if ((defined (READGUY_ALLOW_EPDCS_AS_BUTTON)) || ((defined(READGUY_ALLOW_SDCS_AS_BUTTON)) && (defined(READGUY_ENABLE_SD))))
+  for(int j=15;j<=17;j++){ //btn1~3
+#ifdef READGUY_ALLOW_EPDCS_AS_BUTTON
+    if(READGUY_epd_cs == abs(config_data[j])-1) static_epd_cs = READGUY_epd_cs;
+#endif
+#if (defined(READGUY_ALLOW_SDCS_AS_BUTTON) && defined(READGUY_ENABLE_SD))
+    if(READGUY_sd_cs == abs(config_data[j])-1 && READGUY_sd_cs!=-1) static_sd_cs = READGUY_sd_cs;
+#endif
+  }
+#endif
   //初始化按钮, 原计划要使用Button2库, 后来发现实在是太浪费内存, 于是决定自己写
   if(READGUY_btn1) btn_rd[0].begin(abs(READGUY_btn1)-1,rd_btn_f,(READGUY_btn1>0));
   if(READGUY_btn2) btn_rd[1].begin(abs(READGUY_btn2)-1,rd_btn_f,(READGUY_btn2>0));
@@ -519,56 +576,105 @@ void ReadguyDriver::display(uint8_t part){
   //......可惜'dynamic_cast' not permitted with -fno-rtti
   // static bool _part = 0; 记忆上次到底是full还是part, 注意启动时默认为full
   if(READGUY_cali==127){
+    part = refresh_begin(part);
     //in_press(); //暂停, 然后读取按键状态 spibz
     guy_dev->drv_fullpart(part&1);
     guy_dev->_display((const uint8_t*)getBuffer(),((part>>1)?part>>1:3));
     //in_release(); //恢复
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+    refresh_end();
+#endif
   }
 }
 void ReadguyDriver::displayBuffer(const uint8_t *buf, uint8_t part){
   if(READGUY_cali==127){
+    part = refresh_begin(part);
     //in_press(); //暂停, 然后读取按键状态 spibz
     guy_dev->drv_fullpart(part&1);
+    epdPartRefresh++;
     guy_dev->_display(buf,((part>>1)?part>>1:3));
     //in_release(); //恢复
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+    refresh_end();
+#endif
   }
 }
 void ReadguyDriver::display(std::function<uint8_t(int)> f, uint8_t part){
   if(READGUY_cali==127){
+    part = refresh_begin(part);
     //in_press(); //暂停, 然后读取按键状态 spibz
     guy_dev->drv_fullpart(part&1);
     guy_dev->drv_dispWriter(f,((part>>1)?part>>1:3));
     //in_release(); //恢复
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+    refresh_end();
+#endif
   }
 }
 void ReadguyDriver::drawImage(LGFX_Sprite &base, LGFX_Sprite &spr,int32_t x,int32_t y,int32_t zoomw, int32_t zoomh) { 
-  if(READGUY_cali==127) guy_dev->drv_drawImage(base, spr, x, y, 0, zoomw, zoomh); 
+  if(READGUY_cali==127) {
+    refresh_begin(0);
+    guy_dev->drv_drawImage(base, spr, x, y, 0, zoomw, zoomh); 
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+    refresh_end();
+#endif
+  }
 }
 void ReadguyDriver::drawImageStage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,int32_t x,int32_t y,uint8_t stage,
   uint8_t totalstage,int32_t zoomw,int32_t zoomh) {
   if(READGUY_cali!=127 || stage>=totalstage) return;
-  //Serial.printf("stage: %d/%d\n",stage+1,totalstage);
+#ifdef READGUY_SERIAL_DEBUG
+  Serial.printf_P(PSTR("[Guy Draw] stage: %d/%d\n"),stage+1,totalstage);
+#endif 
+  refresh_begin(0);
   guy_dev->drv_drawImage(sprbase, spr, x, y, (totalstage<=1)?0:(stage==0?1:(stage==(totalstage-1)?3:2)),zoomw,zoomh);
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+    refresh_end();
+#endif
 }
 void ReadguyDriver::setDepth(uint8_t d){ 
-  if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling()) guy_dev->drv_setDepth(d); 
+  if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling()) {
+//    refresh_begin(0);
+    if(d==0 || d>15) { d=15; } //invalid. set to default value 15.
+    guy_dev->drv_setDepth(d); 
+    current_depth = d;
+//#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+//    refresh_end();
+//#endif
+  }
 }
 void ReadguyDriver::draw16grey(LGFX_Sprite &spr,int32_t x,int32_t y,int32_t zoomw,int32_t zoomh){
   if(READGUY_cali!=127) return;
+  refresh_begin(0);
   if(guy_dev->drv_supportGreyscaling() && (spr.getColorDepth()&0xff)>1)
     return guy_dev->drv_draw16grey(*this,spr,x,y,zoomw,zoomh);
   guy_dev->drv_drawImage(*this, spr, x, y, 0, zoomw, zoomh);
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+    refresh_end();
+#endif
 }
 void ReadguyDriver::draw16greyStep(int step){
   if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling() && step>0 && step<16 ){
-    if(step==1) guy_dev->drv_fullpart(1);
+    if(step==1) {
+      refresh_begin(0);
+      guy_dev->drv_fullpart(1);
+    }
     guy_dev->drv_draw16grey_step((const uint8_t *)this->getBuffer(),step);
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+    if(step>=15) refresh_end();
+#endif
   }
 }
 void ReadguyDriver::draw16greyStep(std::function<uint8_t(int)> f, int step){
   if(READGUY_cali==127 && guy_dev->drv_supportGreyscaling() && step>0 && step<16 ){
-    if(step==1) guy_dev->drv_fullpart(1);
+    if(step==1) {
+      refresh_begin(0);
+      guy_dev->drv_fullpart(1);
+    }
     guy_dev->drv_draw16grey_step(f,step);
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+    if(step>=15) refresh_end();
+#endif
   }
 }
 void ReadguyDriver::invertDisplay(){
@@ -579,10 +685,100 @@ void ReadguyDriver::invertDisplay(){
   }
 }
 void ReadguyDriver::sleepEPD(){
-  if(READGUY_cali==127) guy_dev->drv_sleep();
+  if(READGUY_cali==127) {
+    if(READGUY_bl_pin>=0) digitalWrite(READGUY_bl_pin, LOW); //关闭背光灯, 节省电量
+    guy_dev->drv_sleep();
+  }
 }
-
-#if (defined(INDEV_DEBUG))
+uint8_t ReadguyDriver::refresh_begin(uint8_t freshType){
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+  if(refresh_state){
+    refresh_state=0;
+    refresh_press = 0x7f; //clear state
+    for(uint8_t i=0;i<3;i++){ //修复老旧硬件 按键和DC引脚冲突
+      bool flag = 0;
+      if(config_data[15+i] == 0) break;
+      int ipin = abs((int)config_data[15+i])-1;
+      if(ipin == (int)READGUY_epd_dc){ //旨在解决部分老旧硬件共用DC引脚
+        while(btn_rd[i].isPressedRaw() == ((int)config_data[15+i] > 0)) { //这里需要按下的状态
+          flag = 1;
+          yield();
+        }
+        if(flag) {
+  #ifdef READGUY_SERIAL_DEBUG
+          Serial.printf_P(PSTR("[Guy Pin] refresh_begin pin %d mode output\n"), READGUY_epd_dc);
+  #endif //等待恢复到按键空闲电平 btn>0 代表低电平按下, 此时右边为1 btn<0 代表高电平按下
+          delay(btn_rd[i].min_debounce); //去抖动
+//#ifdef ESP8266
+//        btnTask.detach();//暂时关闭任务, 避免引脚被设置为非法模式
+//#else
+//        vTaskSuspend(btn_handle);//暂时关闭任务, 避免引脚被设置为非法模式
+//#endif
+          spibz|=0x40; //set bit at 0x40
+          refresh_press = i;
+          //pinMode((uint8_t)READGUY_epd_dc, OUTPUT);
+        }
+      }
+    }
+  }
+#endif
+  if((freshType&1)==1){ //隶属于快刷的范畴, 计数+1
+    if(epdPartRefresh >= epdForceFull) {
+      epdPartRefresh = 0;
+      return (freshType & 0xfe);
+    }
+    else {
+      if(!epdPartRefresh) guy_dev->drv_setDepth(current_depth); //慢刷完成后的首次快刷, 保存上次的刷新颜色深度
+      if(epdPartRefresh<0x7ffe) epdPartRefresh++;
+    }
+  }
+  else epdPartRefresh = 0; //全刷, 重置计数器
+  return freshType;
+}
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+void ReadguyDriver::refresh_end(){
+#ifdef READGUY_ALLOW_DC_AS_BUTTON
+  //for(uint8_t i=15;i<=17;i++){ //修复老旧硬件 按键和DC引脚冲突
+  //  if(config_data[i] == 0) break;
+  //  int ipin = abs((int)config_data[i])-1;
+  if(refresh_press != 0x7f && !refresh_state){ //旨在解决部分老旧硬件共用DC引脚的bug
+#ifdef READGUY_SERIAL_DEBUG
+    Serial.printf_P(PSTR("[Guy Pin] refresh_end pin %d\n"), READGUY_epd_dc);
+#endif //pinMode((uint8_t)READGUY_epd_dc, INPUT_PULLUP);
+    spibz&=0x3f; //reset bit at 0x40
+//#ifdef ESP8266
+//    btnTask.attach_ms(BTN_LOOPTASK_DELAY,looptask);
+//#else
+//    vTaskResume(btn_handle);
+//#endif //开启任务后, 延时确保按键任务可以活跃而不是一直处于被暂停又刷屏的无限循环
+    delay((BTN_LOOPTASK_DELAY+btn_rd[refresh_press].min_debounce)*2);
+  }
+  refresh_state = 1;
+#endif
+}
+#endif
+void ReadguyDriver::setAutoFullRefresh(int16_t frames){
+  //epdPartRefresh = frames<0?-frames:0;
+  if(frames<0) epdPartRefresh = -frames;
+  if(frames) {
+    epdForceFull = (frames<0?-frames:frames);
+  }
+  else {
+    epdForceFull = 0x7fff;
+  }
+}
+#ifdef ESP8266
+void ReadguyDriver::recoverI2C(){
+  if(READGUY_cali!=127) return;
+  for(int i=13;i<=14;i++){ // READGUY_i2c_scl == config_data[14]; READGUY_i2c_sda == config_data[13];
+    if(config_data[i] == 12 || config_data[i] == 13 || config_data[i] == 14) pinMode(config_data[i], SPECIAL);
+    for(int j=15;j<=17;j++){ // READGUY_btn1 == config_data[15]; b2 == config_data[15]; b3== config_data[17];
+      if(config_data[i] == abs((int)config_data[j])-1) pinMode(config_data[i], config_data[j]>0?INPUT_PULLUP:INPUT_PULLDOWN);
+    }
+  }
+}
+#endif
+#if (defined(READGUY_INDEV_DEBUG))
 void ReadguyDriver::nvs_init(){
 }
 void ReadguyDriver::nvs_deinit(){
@@ -614,7 +810,9 @@ bool ReadguyDriver::nvs_read(){
 #endif
       s[i]=(char)rd;
   }
-  Serial.printf("[Guy NVS] Get EEPROM...%d\n", config_data[0]);
+#ifdef READGUY_SERIAL_DEBUG
+  Serial.printf_P(PSTR("[Guy NVS] ReadGuy Ver " READGUY_VERSION " on " _READGUY_PLATFORM " Get EEPROM...%d\n"), config_data[0]);
+#endif
   return !(strcmp_P(s,projname));
 }
 void ReadguyDriver::nvs_write(){
@@ -725,19 +923,109 @@ void ReadguyDriver::looptask(){ //均为类内静态数据
   btn_rd[1].loop();
   btn_rd[2].loop();
 }
+bool ReadguyDriver::screenshot(const char *filename){
+#ifdef READGUY_ENABLE_SD
+  if(!SDinside(false)) return 0;
+  uint16_t ibytes = ((width()+31)>>3)&0x7ffcu; //必须是4的倍数
+  uint16_t bmpHeader[] = { //0x3e == 62 字节
+    0x4d42,       //[ 0]字符BM, 固定文件头
+    0x0f7e,0,0,0, //[ 1]File Size 文件总大小   文件大小0x0f7e == 3966; 位图数据大小32*122 == 3904
+    0x003e,0,     //[ 5]Bitmap Data Offset (BDO) 信息头到数据段的字节数 (索引到0x3e后的第一个数据就是位图字节数据)
+    0x0028,0,     //[ 7]Bitmap Header Size (BHS) 信息头长度
+    0x00fa,0,     //[ 9]宽度 0xfa == 250
+    0x007a,0,     //[11]高度 0x7a == 122
+    0x01,         //[13]Planes 位面数(图层数) 锁定为1
+    0x01,         //[14]Bits Per Pixel (BPP) 每像素位数 (1bit/pixel)
+    0,0,          //[15]Compression 压缩方法 压缩说明：0-无压缩
+    0x0f40,0,     //[17]Bitmap Data Size	 位图数据的字节数。该数必须是4的倍数    0x0f40 == 3904 == 32*122
+    0x0ec4,0,     //[19]Horizontal Resolution 水平分辨率 0x0ec4==3780 (pixel/metre)==96.012 (pixel/inch)
+    0x0ec4,0,     //[21]Vertical Resolution   水平分辨率 0x0ec4==3780 (pixel/metre)==96.012 (pixel/inch)
+    0,0,          //[23]Colours 位图使用的所有颜色数。为0表示使用 2^比特数 种颜色 如8-比特/像素表示为100h或者 256.
+    0,0,          //[25]Important Colours 指定重要的色彩数。当该域的值等于色彩数或者等于0时，表示所有色彩都一样重要
+    0,0,          //[27]重要颜色 0: 黑色 (#000000) R0 G0 B0 X0
+    0xffff,0xff   //[29]重要颜色 1: 白色 (#ffffff) R255 G255 B255 X0
+  };
+#if (defined(READGUY_ALLOW_SDCS_AS_BUTTON))
+  setSDbusy(1);
+#endif
+  File bmpf = guyFS().open(filename,"w");
+  if(!bmpf) { 
+#if (defined(READGUY_ALLOW_SDCS_AS_BUTTON))
+    setSDbusy(0); 
+#endif
+    return 0; 
+  }
+  uint32_t datsz = ibytes * height();
+  bmpHeader[ 1] = (datsz + sizeof(bmpHeader)) & 0xffffu;
+  bmpHeader[ 2] = (datsz + sizeof(bmpHeader)) >> 16;
+  bmpHeader[ 9] = width();
+  bmpHeader[11] = height();
+  bmpHeader[17] = datsz & 0xffffu;
+  bmpHeader[18] = datsz >> 16;
+  bmpf.write((uint8_t*)bmpHeader,sizeof(bmpHeader));
+  uint8_t *byteWrite = new uint8_t [ibytes];
+  for(int h=bmpHeader[11]-1;h>=0;h--){           //bmpHeader[11] == tft->height()
+    for(uint16_t i=0;i<ibytes;i++) byteWrite[i] = 0;  //ibytes == (tft->width()+7)>>3
+    for(uint16_t w=0;w<=bmpHeader[9];w++){            //bmpHeader[ 9] == tft->width()
+      byteWrite[w>>3] |= !!(readPixel(w,h))<<((w&7)^7);
+    }
+    bmpf.write(byteWrite,ibytes);
+    yield();
+  }
+  bmpf.close();
+#if (defined(READGUY_ALLOW_SDCS_AS_BUTTON))
+  setSDbusy(0); 
+#endif
+  delete [] byteWrite; //释放内存
+  //bmpf = guyFS().open(filename,"r");
+  //if(!bmpf || bmpf.size()!=datsz + sizeof(bmpHeader) || bmpf.peek() != 0x42) return 0; //检查
+  //bmpf.close();
+  return 1;
+#else
+  return 0;
+#endif
+}
 
-uint8_t ReadguyDriver::rd_btn_f(uint8_t btn){
+uint8_t ReadguyDriver::rd_btn_f(uint8_t btn, bool activeLow){
   static uint8_t lstate=0; //上次从dc引脚读到的电平
 #ifdef ESP8266
-  if(btn==ReadguyDriver::pin_cmx && spibz) return lstate;
-  if(btn==D5||btn==D6||btn==D7||btn==ReadguyDriver::pin_cmx) 
-    pinMode(btn,INPUT_PULLUP);//针对那些复用引脚做出的优化
+  if(btn==ReadguyDriver::pin_cmx && ReadguyDriver::spibz) return lstate;
+#ifdef READGUY_ALLOW_EPDCS_AS_BUTTON
+  static uint8_t epdcsstate=0; //上次从epd_cs引脚读到的电平
+  if(btn==ReadguyDriver::static_epd_cs && ReadguyDriver::spibz) return epdcsstate;
+#endif
+#if (defined(READGUY_ALLOW_SDCS_AS_BUTTON) && defined(READGUY_ENABLE_SD))
+  static uint8_t sdcsstate=0; //上次从sd_cs引脚读到的电平
+  if(btn==ReadguyDriver::static_sd_cs && ReadguyDriver::sd_cs_busy) return sdcsstate;
+#endif
+  if(btn==D5||btn==D6||btn==D7||btn==ReadguyDriver::pin_cmx
+#ifdef READGUY_ALLOW_EPDCS_AS_BUTTON
+    || btn==ReadguyDriver::static_epd_cs
+#endif
+#if (defined(READGUY_ALLOW_SDCS_AS_BUTTON) && defined(READGUY_ENABLE_SD))
+    || btn==ReadguyDriver::static_sd_cs
+#endif
+  ) 
+    pinMode(btn,activeLow?INPUT_PULLUP:INPUT_PULLDOWN);//针对那些复用引脚做出的优化
   uint8_t readb = digitalRead(btn);
-  if(btn==ReadguyDriver::pin_cmx) {
+  if(btn==ReadguyDriver::pin_cmx
+#ifdef READGUY_ALLOW_EPDCS_AS_BUTTON
+    || btn==ReadguyDriver::static_epd_cs
+#endif
+#if (defined(READGUY_ALLOW_SDCS_AS_BUTTON) && defined(READGUY_ENABLE_SD))
+    || btn==ReadguyDriver::static_sd_cs
+#endif
+  ) {
     //Serial.printf("rd D1.. %d\n",spibz);
     pinMode(btn,OUTPUT); //如果有复用引脚, 它们的一部分默认需要保持输出状态, 比如复用的DC引脚
     digitalWrite(btn,HIGH);    //这些引脚的默认电平都是高电平
-    lstate = readb;
+    if(btn==ReadguyDriver::pin_cmx) lstate = readb;
+#ifdef READGUY_ALLOW_EPDCS_AS_BUTTON
+    else if(btn==ReadguyDriver::static_epd_cs) epdcsstate = readb;
+#endif
+#if (defined(READGUY_ALLOW_SDCS_AS_BUTTON) && defined(READGUY_ENABLE_SD))
+    else if(btn==ReadguyDriver::static_sd_cs) sdcsstate = readb;
+#endif
   }
   else if(btn==D5||btn==D6||btn==D7) pinMode(btn,SPECIAL); //针对SPI引脚进行专门的优化
   return readb;
@@ -745,7 +1033,7 @@ uint8_t ReadguyDriver::rd_btn_f(uint8_t btn){
   if(btn!=ReadguyDriver::pin_cmx)
     return digitalRead(btn);
   if(spibz) return lstate;
-  pinMode(btn,INPUT_PULLUP);
+  pinMode(btn,activeLow?INPUT_PULLUP:INPUT_PULLDOWN);
   uint8_t readb = digitalRead(btn);
   pinMode(btn,OUTPUT);
   digitalWrite(btn,HIGH);

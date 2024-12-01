@@ -88,63 +88,67 @@ void setup(){
 
 //                                          ------------------- 2 - 使用ReadGuy来显示字符串 ------<<
 
-  guy.setFont(&FreeMonoBold9pt7b);  //设置显示的字体
+  guy.setFont(&FreeMonoBold9pt7b);  //设置显示的字体. 字体的更多信息可以查阅 Github 上的 Freefont
 
-  guy.setTextColor(0,1);  //设置显示的颜色. 0代表黑色, 1代表白色
+  guy.setTextColor(0,1);  //设置显示的颜色. 0代表深色, 1代表白色
+                          //注意这个函数不是设定显示灰度的函数! 这只是设置像素显示到屏幕缓存里的颜色
+                          //屏幕缓存对于每个像素点只能保存黑白两种颜色信息. 若是显示到屏幕则为深色和白色
+                          //所有通过 setDepth 以外的函数设置的颜色都只有深色和白色
+    //如果要实现灰度显示, 请参考后面的代码, 会提供相关说明的. 其中设置颜色灰度应当使用 setDepth() 函数
 
   guy.drawString("Hello Readguy!",10,10); //用此函数将字符串显示到屏幕缓存内
-  //guy.print("Hello Readguy!"); //使用这个函数也能显示出字符串, 但是需要提前使用setCursor确定显示坐标
+  //guy.print("Hello Readguy!");  //使用这个函数也能显示出字符串, 但是需要提前使用setCursor确定显示坐标
 
-  guy.display(READGUY_FAST);   // 快速刷新. 将屏幕缓存内的内容显示到墨水屏幕上
-                               // 但是, 上电初始化之后的首次刷新必为慢速刷新
-  //guy.display(READGUY_SLOW); // 慢速刷新. 
+  guy.display(READGUY_FAST);    // 快速刷新. 将屏幕缓存内的内容显示到墨水屏幕上
+                                // 但是, 上电初始化之后的首次刷新必为慢速刷新
+  //guy.display(READGUY_SLOW);  // 慢速刷新. 
 
-  guy.setCursor(10,30); //设置显示的坐标
+  guy.setCursor(10,30);         //设置显示的坐标
 
-  guy.print("Hello~"); //或者用print函数在屏幕上打印字符串, 数值, 字符等等... 两种函数都行
+  guy.print("Hello~");          //或者用print函数在屏幕上打印字符串, 数值, 字符等等... 两种函数都行
 
-  guy.display(READGUY_SLOW); // 慢速刷新. 慢刷的对比度显著高于快速刷新, 而且可以消除残影
+  guy.display(READGUY_SLOW);    // 慢速刷新. 慢刷的对比度显著高于快速刷新, 而且可以消除残影
 
 
   guy.drawString(guy.SDinside()?"SD card OK.":"No SD card!",10,50); //检查readguy是否插入了SD卡
 
   guy.drawString("with " _READGUY_PLATFORM ".",10,70); //检查readguy运行在ESP8266上还是ESP32上.
 
-  guy.display(); //不带参数时, 默认使用快速刷新
+  guy.display();                //不带参数时, 默认使用快速刷新
 
 
-  guy.setTextColor(0);  //设置显示的颜色. 一个参数时,代表文本背景色为透明;
-  //两个参数时, 代表文本背景色为后面的那个参数代表的颜色. 此次函数调用之后将显示为透明背景.
+  guy.setTextColor(0);          //设置显示的颜色. 一个参数时,代表文本背景色为透明;
+    //两个参数时, 代表文本背景色为后面的那个参数代表的颜色. 此次函数调用之后将显示为透明背景.
 
-  guy.setCursor(10,80); //设置显示的坐标, 用于显示别的内容
+  guy.setCursor(10,80);         //设置显示的坐标, 用于显示别的内容
 
-  guy.setTextSize(2); //或者用此函数在屏幕上打印字符串.
+  guy.setTextSize(2);           //或者用此函数在屏幕上打印字符串.
 
-  guy.print('a'); //使用print打印字符.
+  guy.print('a');               //使用print打印字符.
 
-  guy.display(); //快刷
+  guy.display();                //快刷
 
 
-  guy.setTextSize(1); //恢复常规大小字符
+  guy.setTextSize(1);           //恢复常规大小字符
   
-  guy.setFont(&fonts::Font0); //设置小字体 [字体设定部分参考lovyanGFX的示例]
+  guy.setFont(&fonts::Font0);   //设置小字体 [字体设定部分参考lovyanGFX等库的示例, 请查阅这些库的代码]
   
-  guy.setCursor(10,110); //设置显示的坐标, 用于显示别的内容
+  guy.setCursor(10,110);        //设置显示的坐标, 用于显示别的内容
 
-  guy.print(926824162); //使用print打印数字.
+  guy.print(926824162);         //使用print打印数字. (本数字为ReadGuy库的官方QQ交流群号)
 
-  guy.print(' '); //使用print打印字符.
+  guy.print(' ');               //使用print打印字符.
 
-  guy.print(1.61834,5); //使用print打印浮点数字, 5代表显示5位数
+  guy.print(1.61834,5);         //使用print打印浮点数字, 5代表显示5位数
 
-  guy.display(); //快刷
+  guy.display();                //快刷
 
 
-  guy.setCursor(10,130); //设置显示的坐标, 用于显示别的内容
+  guy.setCursor(10,130);        //设置显示的坐标, 用于显示别的内容
 
   guy.printf("Small font using %s. It's a long string in the E-paper. "
   "Readguy always print it in a new line","printf");
-  //使用 print 或者 printf 显示长串字符串时, 后面的字符会自动显示到下一行.而 drawString 不会这样
+    //使用 print 或者 printf 显示长串字符串时, 后面的字符会自动显示到下一行.而 drawString 不会这样
 
   guy.display(); //快刷
   
@@ -154,30 +158,30 @@ void setup(){
 
   guy.fillScreen(1);
 
-  guy.display(READGUY_SLOW); // 慢速刷新. 慢刷的对比度显著高于快速刷新, 而且可以消除残影
+  guy.display(READGUY_SLOW);    // 慢速刷新. 慢刷的对比度显著高于快速刷新, 而且可以消除残影
 
-  for(int i=1;i<16;i++){ //灰度测试, 循环设置不同灰度
+  for(int i=1;i<16;i++){        //灰度测试, 循环设置不同灰度
 
-    guy.setDepth(i); //设置灰度的颜色深度. 可接受的值为1~15.(从白到黑)
-    //注意1. 在此函数内参数越接近0越白, 越接近15越黑. 输入参数为0或者>15时则自动设为15(最黑).
-    //这和其他绘图函数中的 "0黑1白" 表示方法相反.
-    //注意2. 此函数需要在程序中调用display()函数刷新屏幕之后才会生效, 且此次刷新必须是快刷.
-    //若该函数在两次display()函数之间被多次调用, 则最终呈现的灰度依据最后一次调用的setDepth()函数.
-    // OK: guy.setDepth(4); guy.print("hello"); guy.display();
-    //     guy.setDepth(8); guy.print("world"); guy.display();
-    // NOT OK: guy.setDepth(4); guy.print("hello");
-    //         guy.setDepth(8); guy.print("world"); guy.display();
-    // 最终呈现两个print函数等效于只调用一次 guy.setDepth(8);
+    guy.setDepth(i);            //设置灰度的颜色深度. 可接受的值为1~15.(从白到黑)
+      //注意1. 在此函数内参数越接近0越白, 越接近15越黑. 输入参数为0或者>15时则自动设为15(最黑).
+      //这和其他绘图函数中的 "0黑1白" 表示方法相反.
+      //注意2. 此函数需要在程序中调用display()函数刷新屏幕之后才会生效, 且此次刷新必须是快刷.
+      //若该函数在两次display()函数之间被多次调用, 则最终呈现的灰度依据最后一次调用的setDepth()函数.
+      // OK: guy.setDepth(4); guy.print("hello"); guy.display();
+      //     guy.setDepth(8); guy.print("world"); guy.display();
+      // NOT OK: guy.setDepth(4); guy.print("hello");
+      //         guy.setDepth(8); guy.print("world"); guy.display();
+      // 最终呈现两个print函数等效于只调用一次 guy.setDepth(8);
 
     guy.fillRect(10,i*10,20,10,0); //显示填充矩形.
-    //注意, 此处最后一个参数0代表是黑色, 黑色的深度则是由前面的setDepth函数设定的.
-    //即使您希望使用setDepth(1)之后显示一个浅灰色的矩形, 也需要将这个参数设为0(黑色)
+      //注意, 此处最后一个参数0代表是深色, 深色的深度则是由前面的setDepth函数设定的.
+      //即使您希望使用setDepth(1)之后显示一个浅灰色的矩形, 也需要将这个参数设为0(深色)
 
-    guy.setCursor(32,i*10);
+    guy.setCursor(32,i*10);        //设置文本显示坐标
 
-    guy.printf("Grey%d",i);
+    guy.printf("Grey%d",i);        //使用类似C语言的printf函数来显示带数字的格式化字符串
 
-    guy.display(); //快刷显示.
+    guy.display();                 //快刷显示.
 
   }
   delay(2000);
@@ -185,34 +189,34 @@ void setup(){
 //                                            --------------------- 4 - 显示BMP格式图片文件 ----<<<<
   // [此部分更多可以参考lovyanGFX的示例]
 
-  guy.fillScreen(1);  //清屏
+  guy.fillScreen(1);        //清屏
   
-  guy.display(); //显示白屏,用于将来显示图片.
+  guy.display();            //显示白屏,用于将来显示图片.
   
-  LGFX_Sprite sp(&guy); //创建一个Sprite (可以存储一些像素, 快速读写)
+  LGFX_Sprite sp(&guy);     //创建一个Sprite (可以存储一些像素, 快速读写)
 
   sp.createFromBmpFile(guy.guyFS(),"/test.bmp"); //从文件创建BMP图像信息.
   //使用guy.guyFS()函数返回可用的文件系统. 默认为SD卡. 当SD卡不可用时, 自动切换到内置的LittleFS.
 
   //显示打开的图片信息(宽度和高度), 和剩余内存
-  Serial.printf("[%lu] sp.w: %d, h: %d, res: %d.\n",millis(),sp.width(),sp.height(),ESP.getFreeHeap());
+  Serial.printf("[%lu] sp.w: %d, h: %d, res: %d.\n",millis(),sp.width(),sp.height(),guy.getFreeMem());
 
-  guy.drawImage(sp,10,10); //使用抖动像素的方式显示图片(不是灰度, 只有黑点和白点的那种显示效果)
+  guy.drawImage(sp,10,10);  //使用抖动像素的方式显示图片(不是灰度, 只有黑点和白点的那种显示效果)
 
-  guy.display(); //自从1.2.0更新之后, drawImage不再刷屏, 此处需要额外调用display函数刷屏
+  guy.display();            //自从1.2.0更新之后, drawImage不再刷屏, 此处需要额外调用display函数刷屏
 
   Serial.printf("[%lu] drawn dithering bmp.\n",millis()); //显示信息
 
   delay(2000);
 
 
-  guy.setGreyQuality(1); //设置灰度刷新方式. 对于支持连续刷灰度的屏幕才有效.
+  guy.setGreyQuality(1);    //设置灰度刷新方式. 对于支持连续刷灰度的屏幕才有效.
   // 1(默认)为连续刷新, 0为循环调用 setDepth+display 来刷新 (可能会有白边)
   //如果连续刷新效果不好, 请将此处改为0再试一次.
 
   guy.draw16grey(sp,10,10); //使用16级灰度的方式显示图片 需要的时间比较长
 
-  sp.deleteSprite(); //关闭图片文件, 释放图片占用的大量内存
+  sp.deleteSprite();        //关闭图片文件, 释放图片占用的大量内存
 
   Serial.printf("[%lu] drawn 16-layer greyscale bmp.\n",millis()); //显示信息
 
@@ -221,72 +225,72 @@ void setup(){
 //                                            ---------------------- 5 - 其他屏幕功能测试 ---<<<<<
 
   guy.setFont(&FreeMonoBold9pt7b); //设置文本字体
-  guy.setTextColor(0); //设置文本颜色
-  guy.fillScreen(1); //用白色清屏.
+  guy.setTextColor(0);             //设置文本颜色
+  guy.fillScreen(1);               //用白色清屏.
   guy.display(READGUY_SLOW); //慢刷. 注意, 进行慢刷操作之后, 所有之前显示的灰度内容均会被重新刷成纯黑色
   //不管是浅灰色还是深灰色, 进行慢刷之后只有黑白色. 原来的非白色像素(浅灰色,深灰色和黑色等) 会全刷成白色.
   
   guy.drawString("Rotation 0",10,12); //默认旋转方向为0. 实际的默认方向取决于屏幕IC. 大多数屏幕IC是竖屏.
   drawLines(); //调用 画线函数, 绘制屏幕上的一些线条.并显示.
 
-  guy.fillScreen(1); //用白色清屏.
+  guy.fillScreen(1);                  //用白色清屏.
   guy.setRotation(1);                 //设置旋转方向, 旋转完成之后会对画面进行裁切.
-  guy.drawString("setRotation 1",12,10); //设置旋转方向
+  guy.drawString("Set Rot 1",12,10);  //设置旋转方向
   drawLines();
   
-  guy.fillScreen(1); //用白色清屏.
-  guy.setRotation(2); //方向2和方向0 的宽度和高度相同.旋转了180度.
-  guy.drawString("Rot 2",12,10); //设置旋转方向
+  guy.fillScreen(1);                  //用白色清屏.
+  guy.setRotation(2);                 //方向2和方向0 的宽度和高度相同.旋转了180度.
+  guy.drawString("Rot 2",12,10);      //设置旋转方向
   drawLines();
   
-  guy.fillScreen(1); //用白色清屏.
-  guy.setRotation(3); //方向3和方向1 的宽度和高度也是相同的.旋转了180度.
-  guy.drawString("Rotate 3",15,10); //设置旋转方向
+  guy.fillScreen(1);                  //用白色清屏.
+  guy.setRotation(3);                 //方向3和方向1 的宽度和高度也是相同的.旋转了180度.
+  guy.drawString("Rotate 3",15,10);   //设置旋转方向
   drawLines();
 
 
-  guy.drawString("Sleeping...",10,30);  //此部分程序演示如何使用屏幕睡眠(降低耗电量)
+  guy.drawString("Sleeping...",10,30);//此部分程序演示如何使用屏幕睡眠(降低耗电量)
 
-  guy.invertDisplay();                  //对屏幕上的一切都进行反色处理
+  guy.invertDisplay();                //对屏幕上的一切都进行反色处理
 
-  guy.display();                        //即将进入睡眠状态
+  guy.display();                      //即将进入睡眠状态
 
-  guy.sleepEPD();                      //进入睡眠模式
+  guy.sleepEPD();                     //进入睡眠模式. 睡眠模式下再次刷新屏幕必须使用慢速刷新
   //注意, 如果没有设置RST引脚, 则实际上不会进入睡眠模式. 睡眠模式依赖RST引脚的复位信号.
   
   delay(3000);
 
-  guy.setTextColor(1);  //设置文本颜色为白色,因为被反色的屏幕的当前像素颜色以黑色像素为主
+  guy.setTextColor(1);        //设置文本颜色为白色, 因为被反色的屏幕的当前像素颜色以黑色像素为主
   guy.drawString("Wake Up! ~\\(^_^)/~",10,50); //退出睡眠状态
 
-  guy.display(READGUY_SLOW);  //使用慢刷 来唤醒处于低功耗状态下的屏幕.
+  guy.display(READGUY_SLOW);  //使用全屏慢刷 来唤醒处于低功耗状态下的屏幕.
 
 //                                   ------------------ 6 - 可以利用灰度来达到的一些显示效果 --<<<<<<
   
-  guy.fillScreen(1);  //清屏
+  guy.fillScreen(1);    //清屏
   
-  guy.display(FILL_WHITE,READGUY_SLOW); //慢刷清屏. 左侧的FILL_WHITE表示 不写入屏幕缓存, 直接刷全白
-  //可以改为FILL_BLACK来设置写入缓存全黑.
-  //以上的方式均不会修改屏幕缓存中的内容. 右侧的false表示全屏慢刷.
+  guy.display(FILL_WHITE,READGUY_SLOW);    //慢刷清屏. 左侧的FILL_WHITE表示 不写入屏幕缓存, 直接刷全白
+                                           //可以改为FILL_BLACK来设置写入缓存全黑.
+                                           //以上的两种 guy.display(...) 方法均不会修改屏幕缓存中的内容.
 
-  guy.setTextColor(0);  //设置显示的颜色. 0代表黑色, 一个参数代表黑白显示.
-                        //注意这个函数不是设定显示灰度的函数!
+  guy.setTextColor(0);                     //设置显示的颜色. 0代表深色, 1代表白色. 一个参数代表黑白显示.
+                                           //注意这个函数不是设定显示灰度的函数!
   
-  guy.setDepth(0); //恢复黑色显示, 此语句等效于setDepth(15)
-  guy.setFont(&FreeMonoBold9pt7b); //设置文本字体
+  guy.setDepth(0);                         //恢复黑色显示, 此语句等效于setDepth(15)
+  guy.setFont(&FreeMonoBold9pt7b);         //设置文本字体
   guy.drawString("I love Readguy!",10,10); //设置显示坐标并显示
-  guy.display(); //setDepth()函数需要调用display()函数刷新屏幕之后才会生效
+  guy.display();                           //setDepth()函数需要调用display()函数刷新屏幕之后才会生效
 
-  guy.setDepth(4); //把灰度深度设为一个浅色, 方便勾勒阴影.
+  guy.setDepth(4);                         //把灰度深度设为一个浅色, 方便勾勒阴影.
   guy.drawString("I love Readguy!",12,12); //错开2像素并减淡颜色灰度,可以实现阴影效果
   guy.display();
 
   const char *st="Programmed by";
-  guy.setDepth(7); //设置颜色深度
+  guy.setDepth(7);          //设置颜色深度
   guy.drawString(st,11,31); //设置显示坐标
   guy.display();
   guy.setDepth(4);          //这里有一点需要注意: 如果显示的位置原本就已经显示过灰度数据了
-  guy.drawString(st,10,31); //(其实这里的像素在内存里存储的还是黑色), 即使新设定的颜色深度比之前的颜色深,
+  guy.drawString(st,10,31); //(其实这里的像素在内存里存储的还是深色), 即使新设定的颜色深度比之前的颜色深,
   guy.drawString(st,11,30); //也不会覆盖这里原来的浅灰色. 此处的灰度设定只对原来是纯白色的像素有效.
   guy.display();            //如果要更改这个像素点的颜色, 只能全部刷白屏之后再重新刷这些灰度颜色.
   guy.setDepth(15);         //(最好是慢刷白屏,如果要坚持使用快刷,也需要把灰度设置为全黑色对应的15再刷)
@@ -295,31 +299,31 @@ void setup(){
   guy.display();
 
   const char str[]="FriendshipEnder"; //实现类似于渐变色的效果
-  guy.setCursor(8,50);
+  guy.setCursor(8,50);   //设置显示字符的基础位置坐标
   for(int i=0;i<15;i++){ //在 for 循环内循环修改显示深度
-    guy.setDepth(15-i);
-    guy.print(str[i]);
-    guy.display(); //注意每次使用 setDepth 之后需要再刷一次屏, 灰度设置才能生效
-  }
+    guy.setDepth(15-i);  //设置显示颜色深度 (灰度), 越小越浅(白), 1为最浅, 15为纯黑色
+    guy.print(str[i]);   //显示单个字符
+    guy.display();       //注意每次使用 setDepth 之后需要再刷一次屏, 灰度设置才能生效
+  }                      //设置灰度显示之后必须刷屏才能设置不同的其他灰度, 一次刷出来的只能是一种颜色
 
-  guy.setDepth(6);
-  guy.drawString("Follow me~~",14,68);
+  guy.setDepth(6);       //设置灰度显示的深度为6 (其实也是很浅的灰色了, 但对于一些屏幕来说这个颜色也很黑了)
+  guy.drawString("Follow me~~",14,68); //指定坐标显示文本
   guy.display();
 
-  guy.setDepth(2);
-  guy.drawString("Follow me~~",16,70);
+  guy.setDepth(2);       //设置灰度显示的深度为2 (几乎是白色了)
+  guy.drawString("Follow me~~",16,70); //指定坐标显示文本
   guy.display();
 
-  guy.setDepth(5);
-  guy.setTextColor(0);
-  guy.drawString("on Bilibili!",14,90);
+  guy.setDepth(5);       //设置灰度显示的深度为5
+  guy.setTextColor(0);   //设置文本为深色 (所有通过 setDepth 以外的函数设置的颜色都只有深色和白色)
+  guy.drawString("on Bilibili!",14,90); //指定坐标显示文本
   guy.display();
 
-  guy.setDepth(6); //绘制外框
+  guy.setDepth(6);       //绘制外框, 浅灰色
   guy.drawRoundRect(8,86,guy.textWidth("on Bilibili!")+14,28,7,0);
   guy.display();
 
-  guy.setDepth(15); //恢复到正常黑色
+  guy.setDepth(15);      //恢复到正常黑色
   guy.fillRoundRect(10,88,guy.textWidth("on Bilibili!")+10,24,5,0);
   guy.setTextColor(1);
   guy.drawString("on Bilibili!",16,92);
@@ -327,30 +331,51 @@ void setup(){
 
   delay(5000);
 
-  guy.sleepEPD(); //进入睡眠模式
+  // guy.sleepEPD();     //进入睡眠模式, 屏幕不再刷新.
+  guy.setTextColor(0);   //重新将文本颜色恢复到黑色.
 
 //                                    ------------------ 7 - 屏幕以外的功能: 比如wifi和按钮 -<<<<<<<
 
-  guy.ap_setup(); //启动ESP芯片内置 WiFi 热点, 启动后即可在wifi列表上查看readguy
+  guy.ap_setup();                  //启动ESP芯片内置 WiFi 热点, 启动后即可在wifi列表上查看readguy
 
-  guy.server_setup(); //启动服务器功能, 默认地址为192.168.4.1
+  guy.server_setup();              //启动服务器功能, 默认地址为192.168.4.1
 
 }
 
-int bright=128; //设置亮度
+int bright=128;                    //设置亮度
+
+int showTextPlace=10;              //设置文本显示位置
 
 void loop(){
-  guy.server_loop(); //让服务器保持服务
-  delay(10);
-  if(bright%7==0){
-    Serial.printf("getBtn: %d\n",guy.getBtn()); //每隔一段时间, 检测一下按键.
+
+  guy.server_loop();               //让服务器保持服务
+
+  int buttonValue = guy.getBtn();  //程序会自动检测按键. 使用 guy.getBtn() 可以实时查看当前按键的状态.
+
+  if (buttonValue != 0){           //0 代表没有按键被按下
+
+    guy.fillScreen(1);             //白色清屏
+    guy.setCursor(4,showTextPlace);//设置显示文本位置. showTextPlace 可以让每次按下按钮刷屏位置不一样.
+    guy.print("Button: ");         //显示先导字符串
+    guy.print(buttonValue);        //按下不同的按键, 或者不同的按法, 会显示不同的数字. 自己按以下试试吧.
+    guy.display();                 //显示出来
+
+    if(showTextPlace != 10)
+      showTextPlace = 10;          //在这里显示过文本了, 下一次在另一个地方显示
+    else showTextPlace = 20;       //没在这里显示过文本, 下一次回到上次的地方显示
+
+    Serial.printf("Button: %d\n", buttonValue); //在串口上也显示按键按下的内容.
   }
+
+  //以下的语句用于让背光闪烁呼吸灯.
   if(bright==511) bright=0;
   else bright++;
   guy.setBright(bright>=256?511-bright:bright);
+  delay(10);
 }
 
 void drawLines(){ //声明一个函数, 用于显示一些线条. 此函数在后面的程序中会用到的
+  //具体都有哪些绘图函数可以用, 请参考以下 LovyanGFX 或者 TFT_eSPI 或者 Adafruit_GFX 这几个库的的说明吧
 
   guy.drawFastHLine(0,0,20);    //使用 drawFastHLine 绘制横向线段
   guy.drawFastVLine(0,0,20);    //使用 drawFastVLine 绘制纵向线段

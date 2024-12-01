@@ -45,25 +45,42 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷�
   if(!(m&1)) return; //stage 1
   uint16_t dat[8];
   unsigned short xbits=(drv_width()+7)/8;
+  ips.startWrite();
   if(partMode==0){
     ips.invertDisplay(1);
-    DelayMs(250);
+    DelayMs(SIMULATE_SLOW_REFRESH_DELAY);
+#if ((SIMULATE_BLINK) > 1)
     ips.invertDisplay(0);
-    DelayMs(250);
+    DelayMs(SIMULATE_SLOW_REFRESH_DELAY);
     ips.invertDisplay(1);
-    DelayMs(250);
+    DelayMs(SIMULATE_SLOW_REFRESH_DELAY);
+#endif
+#if ((SIMULATE_BLINK) > 0)
+    ips.invertDisplay(0);
+    DelayMs(SIMULATE_SLOW_REFRESH_DELAY);
+    ips.invertDisplay(1);
+    DelayMs(SIMULATE_SLOW_REFRESH_DELAY);
+#endif
     ips.invertDisplay(0);
   }
   for(int j=0;j<drv_height();j++){
     for(int i=0;i<xbits;i++){
       uint_fast8_t readf=f(j*xbits+i);
+#ifdef SIMULATE_GREYSCALE_COLOUR
       if(readf == 0xff && i!=xbits-1)
+#endif
         ips.drawFastHLine(WHITE_GAP+i*8,WHITE_GAP+j,8,0xffff);
-      else {
+#ifdef SIMULATE_GREYSCALE_COLOUR
+      else
+#endif
+      {
         int lineOK=0;
+#ifdef SIMULATE_GREYSCALE_COLOUR
         if(partMode)//注意这里 readrect函数已经自动化实现边界处理了
           ips.readRect(WHITE_GAP+i*8,WHITE_GAP+j,8,1,dat); 
-        else memset(dat,0xff,sizeof(dat));
+        else
+#endif
+          memset(dat,0xff,sizeof(dat));
         if(readf == 0x00 && i!=xbits-1){
           for(int k=0;k<8;k++)
             if((dat[k]&0x1f)==0x1f) lineOK++;
@@ -74,16 +91,23 @@ void drv::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单色刷�
         }
         for(int k=0;k<8;k++){
           if(i==xbits-1 && i*8+k>=drv_width()) break;
+#ifdef SIMULATE_GREYSCALE_COLOUR
           if((readf&(0x80>>k)))
             ips.drawPixel(WHITE_GAP+i*8+k,WHITE_GAP+j,0xffff);
           else if((dat[k]&0x1f)==0x1f)
             ips.drawPixel(WHITE_GAP+i*8+k,WHITE_GAP+j,0x1082*(15-depth));
+#else
+          if(!(readf&(0x80>>k))) {
+            ips.drawPixel(WHITE_GAP+i*8+k,WHITE_GAP+j,0x1082*(15-depth)); 
+          }
+#endif
         }
       }
     }
     yield();
   }
-  delay(50);
+  ips.endWrite();
+  DelayMs(SIMULATE_FAST_REFRESH_DELAY);
 }
 void drv::drv_sleep() {}
 }

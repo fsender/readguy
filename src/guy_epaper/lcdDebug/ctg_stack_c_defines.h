@@ -73,7 +73,11 @@
 //#define _DEFINA_SD_CS_PIN 0
 
 // * for NodeMcu ctg stack LCF board
-#define WHITE_GAP 2
+#define WHITE_GAP 2                      //白边像素数
+#define SIMULATE_BLINK 1                 //额外的闪屏次数
+#define SIMULATE_SLOW_REFRESH_DELAY  250 //慢刷延时
+#define SIMULATE_FAST_REFRESH_DELAY   50 //快刷延时
+#define SIMULATE_GREYSCALE_COLOUR        //仿真灰度时, 读取屏幕像素决定色彩 (更逼真但更慢)
 
 #ifdef ESP8266
 #define DISPLAY_TYPE_ST7789_240320 //2.0寸的ST7789 IPS TFT模块

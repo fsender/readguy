@@ -151,7 +151,7 @@
 #define READGUY_btn2     (config_data[16]) 
 #define READGUY_btn3     (config_data[17]) 
 #define READGUY_bl_pin   (config_data[18])//前置光接口引脚IO
-#define READGUY_rtc_type (config_data[19])//使用的RTC型号(待定, 还没用上)
+#define READGUY_rtc_type (config_data[19])//现已弃用 RTC 功能. 保留是为了兼容性 让代码更简单维护
 #define READGUY_sd_ok    (config_data[20]) //SD卡已经成功初始化
 #define READGUY_buttons  (config_data[21]) //按钮个数, 0-3都有可能
 
@@ -235,6 +235,8 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     void drawImage(LGFX_Sprite &base,LGFX_Sprite &spr,int32_t x,int32_t y,int32_t zoomw=0,int32_t zoomh=0);
     /// @brief 设置显示对比度(灰度)
     void setDepth(uint8_t d);
+    /// @brief 返回上次设置的显示对比度(灰度)
+    int16_t getDepth() const {return current_depth;}
     /** @brief 返回目标屏幕是否支持16级灰度 返回非0代表支持.
      *  @note 返回负整数则代表调用draw16greyStep需要从深色到浅色刷新, 而不是从浅色到深色刷新 */
     int supportGreyscaling() const{return READGUY_cali==127?guy_dev->drv_supportGreyscaling():0;}
@@ -249,16 +251,21 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
      *  @param step 步骤代号. 从1开始到15,依次调用此函数来自定义的灰度显示显存内容. 没有0和16.
      *  @note 必须按照 "慢刷全屏->绘图->设置参数1->绘图->设置参数2... 调用15次 来完成一次自定义灰度刷屏
      *  连续调用多次此函数之间, 可以修改显存内的像素颜色, 但只能从白色改为黑色.
-     *  @attention 需要先调用 supportGreyscaling() 来确定是否支持灰度分步刷新.为负数时需要从深到浅刷新. 参见示例.
-     */
+     *  @attention 先调用 supportGreyscaling() 来确定是否支持灰度分步刷新. 为负时需要从深到浅刷新. 参见示例.
+     *  方法较为复杂用法参见示例. */
     void draw16greyStep(int step);
     /** @brief 分步刷新显示灰度, 详见 display(f,part) 和 draw16grey(spr,x,y) 的注释.
-     *  @note 此函数不读取显存,而是通过调用该函数来确定像素颜色.                                   */
+     *  @note 此函数不读取显存,而是通过调用该函数来确定像素颜色, 不建议新手使用该函数.  */
     void draw16greyStep(std::function<uint8_t(int)> f, int step);
     /// @brief 对缓冲区内所有像素进行反色.只对现在的缓冲区有效,之后的颜色该怎样就怎样. 灰度信息会被扔掉.
     void invertDisplay();
     /// @brief 进入EPD的低功耗模式
     void sleepEPD(void);
+    /// @brief 设置自动全刷慢刷(连续快刷一定次数之后自动调用慢刷, 保护屏幕
+    /// @param frames 连续快刷多少次之后自动慢刷, 传入0来禁用自动慢刷
+    void setAutoFullRefresh(int16_t frames);
+    /// @brief 截屏并保存到SD卡上. 不支持灰度. 当SD卡不可用或者截屏失败时返回false
+    bool screenshot(const char *filename);
 #ifdef READGUY_ESP_ENABLE_WIFI
     /// @brief ap配网设置页面
     typedef struct {
@@ -286,9 +293,10 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     } serveFunc;
     /// @brief 初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
     void ap_setup(){}
-    void ap_setup(const char *ssid, const char *pass, int m=2){}
+    void ap_setup(const char *ssid, const char *pass, int m=2){(void)ssid; (void)pass; (void)m;} //avoid warning
     /// @brief 初始化服务器模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
-    void server_setup(const String &notify=emptyString, const serveFunc *serveFuncs = nullptr, int funcs = 0){}
+    void server_setup(const String &notify=emptyString, const serveFunc *serveFuncs = nullptr, int funcs = 0)
+      {(void)notify;(void)serveFuncs;(void)funcs;} //avoid warning
     bool server_loop(){ return true; }
     void server_end(){}
 #endif
@@ -306,16 +314,48 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     /** @brief 检查SD卡是否插入
      *  @param check 为true时, 如果SD卡不可用则初始化SD卡. 为false时, 当SD卡不可用则返回LittleFS. */
     bool SDinside(bool check=true) { return check?setSDcardDriver():READGUY_sd_ok; };
+    void SDdeinit() { READGUY_sd_ok = 0; }; //当SD卡被检测到拔出或不可用时, 调用此函数标记
     /// @brief 检查按钮. 当配置未完成时,按钮不可用, 返回0.
     uint8_t getBtn() { return (READGUY_cali==127)?getBtn_impl():0; }
     /// @brief [此函数已弃用 非常不建议使用] 根据按钮ID来检查按钮. 注意这里如果按下返回0, 没按下或者按钮无效返回1
     //uint8_t getBtn(int btnID){return btnID<getButtonsCount()?(!(btn_rd[btnID].isPressedRaw())):1;}
-
+    /// @brief 该函数用于设置按键是否允许扫描连按
     void setButtonSpecial(bool en = 1) { if(READGUY_buttons==3) btn_rd[1].enScanDT(en); }
     /** @brief 返回可用的文件系统. 当SD卡可用时, 返回SD卡. 否则根据情况返回最近的可用文件系统
      *  @param initSD 2:总是重新初始化SD卡; 1:若SD卡不可用则初始化; 0:SD卡不可用则返回LittleFS. */
     fs::FS &guyFS(uint8_t initSD = 0);
+#ifdef ESP8266
+    /// @brief 恢复I2C复用SPI时的引脚功能, 仅ESP8266可用
+    void recoverI2C();
+#else
+    /// @brief 恢复I2C引脚功能
+    void recoverI2C(){}
+#endif
+#if (defined(READGUY_ALLOW_SDCS_AS_BUTTON) && defined(READGUY_ENABLE_SD))
+    /// @brief 设置SD卡为忙状态或空闲状态
+    void setSDbusy(bool busy){ if(static_sd_cs!=0x7f) sd_cs_busy += (busy?1:(sd_cs_busy?-1:0)); }
+#else
+    void setSDbusy(bool busy){ (void)busy; }  //sd_cs as a btn pin
+#endif
 
+#if 0 // disabled because of useless
+    /// @brief 暂停按键扫描 (比如即将要开启中断或者中断, 定时器等硬件外设资源不足)
+    void stopKeyScan(){
+#ifdef ESP8266
+        btnTask.detach();//暂时关闭任务, 避免引脚被设置为非法模式
+#else
+        vTaskSuspend(btn_handle);//暂时关闭任务, 避免引脚被设置为非法模式
+#endif
+    }
+    /// @brief 恢复按键扫描 (中断...等需要定时器的硬件外设用完了)
+    void keyScan(){
+#ifdef ESP8266
+        btnTask.attach_ms(BTN_LOOPTASK_DELAY,looptask);
+#else
+        vTaskResume(btn_handle); //开启任务后, 延时确保按键任务可以活跃而不是一直处于被暂停又刷屏的无限循环
+#endif
+    }
+#endif
     //friend class EpdIf; //这样EpdIf就可以随意操作这个类的成员了
   private:
     //以下是支持的所有屏幕型号 Add devices here!
@@ -336,8 +376,14 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     int8_t READGUY_cali = 0;
     int8_t READGUY_buttons = 0;  //按钮个数, 0-3都有可能
 #endif
-    int epd_OK=0; //墨水屏可用
-    int currentBright = -3; //初始亮度
+    int16_t epdPartRefresh = 0; //连续快刷次数
+    int16_t epdForceFull   = 0x7fff;  //连续快刷达到指定次数后, 强制全刷, 内部变量
+    int16_t currentBright  = -3; //初始亮度
+    int16_t current_depth  = 15; //初始灰度
+    uint8_t refresh_begin(uint8_t freshType); //设置快速刷新 频率调控
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+    void refresh_end();
+#endif
     
     //LGFX_Sprite gfx; // 图形引擎类指针, 可以用这个指针去操作屏幕缓冲区
     readguyEpdBase *guy_dev = nullptr;
@@ -375,9 +421,19 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     static guy_button btn_rd[3];
     /// @brief 复用输出引脚1: 适用于按键引脚与屏幕DC引脚复用的情形
     /// @note 只能解决屏幕DC引脚复用的情况, 其他引脚最好不要复用, 复用了我也解决不了
-    static int8_t pin_cmx;
+    static int8_t  pin_cmx;
+#ifdef READGUY_ALLOW_DC_AS_BUTTON
+    static bool    refresh_state; //1: free; 0: busy(refreshing)
+    static uint8_t refresh_press; //0x7f: epd_dc btn released; others: epd_dc btn pressed
+#endif
+#ifdef READGUY_ALLOW_EPDCS_AS_BUTTON
+    static uint8_t static_epd_cs; //epd_cs as a btn pin
+#endif
+#ifdef READGUY_ALLOW_SDCS_AS_BUTTON
+    static uint8_t static_sd_cs;  //sd_cs as a btn pin
+    static volatile uint8_t sd_cs_busy;  //sd_cs as a btn pin
+#endif
     static volatile uint8_t spibz;
-  private:
 #ifdef READGUY_ESP_ENABLE_WIFI
     //static constexpr size_t EPD_DRIVERS_NUM_MAX = READGUY_SUPPORT_DEVICES;
     static const char *epd_drivers_list[EPD_DRIVERS_NUM_MAX];
@@ -396,22 +452,32 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     //static const PROGMEM uint8_t faviconData[1150];
 #endif
     static void looptask(); //按键服务函数
-    static uint8_t rd_btn_f(uint8_t btn);
+    static uint8_t rd_btn_f(uint8_t btn, bool activeLow);
     uint8_t getBtn_impl(); //按钮不可用, 返回0.
     static void in_press(){ //SPI开始传输屏幕数据
-#ifdef ESP8266
-      if(!spibz) SPI.beginTransaction(SPISettings(ESP8266_SPI_FREQUENCY, MSBFIRST, SPI_MODE0));
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+      if(!(spibz&0x3f))
 #else
-      if(!spibz) epd_spi->beginTransaction(SPISettings(ESP32_DISP_FREQUENCY, MSBFIRST, SPI_MODE0));
+      if(!spibz)
+#endif
+#ifdef ESP8266
+        SPI.beginTransaction(SPISettings(ESP8266_SPI_FREQUENCY, MSBFIRST, SPI_MODE0));
+#else
+        epd_spi->beginTransaction(SPISettings(ESP32_DISP_FREQUENCY, MSBFIRST, SPI_MODE0));
 #endif
       spibz ++; 
     }
     static void in_release(){//SPI结束传输屏幕数据
       spibz --;
-#ifdef ESP8266
-      if(!spibz) SPI.endTransaction();
+#if (defined(READGUY_ALLOW_DC_AS_BUTTON))
+      if(!(spibz&0x3f))
 #else
-      if(!spibz) epd_spi->endTransaction();
+      if(!spibz)
+#endif
+#ifdef ESP8266
+        SPI.endTransaction();
+#else
+        epd_spi->endTransaction();
 #endif
     }
   public: //增加了一些返回系统状态变量的函数, 它们是静态的, 而且不会对程序造成任何影响.
@@ -433,11 +499,14 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     constexpr int getI2cScl  () const { return READGUY_i2c_scl; }// 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
         //按键驱动部分, 为负代表高触发, 否则低触发,
         //注意, 这里的io编号是加1的, 即 1或-1 代表 gpio0 的低触发/高触发
-    constexpr int getBtn1Pin () const { return READGUY_btn1; } 
-    constexpr int getBtn2Pin () const { return READGUY_btn2; } 
-    constexpr int getBtn3Pin () const { return READGUY_btn3; } 
+    constexpr int getBtn1Pin () const { return abs((int)READGUY_btn1)-1; } 
+    constexpr int getBtn2Pin () const { return abs((int)READGUY_btn2)-1; } 
+    constexpr int getBtn3Pin () const { return abs((int)READGUY_btn3)-1; } 
+    constexpr int getBtn1Info() const { return READGUY_btn1; } 
+    constexpr int getBtn2Info() const { return READGUY_btn2; } 
+    constexpr int getBtn3Info() const { return READGUY_btn3; } 
     constexpr int getBlPin   () const { return READGUY_bl_pin; } //前置光接口引脚IO
-    constexpr int getRtcType () const { return READGUY_rtc_type; } //使用的RTC型号(待定, 还没用上)
+    constexpr int getRtcType () const { return READGUY_rtc_type; } //现已弃用 RTC 功能. 保留是为了兼容性 让代码更简单维护
     constexpr int getButtonsCount() const { return READGUY_buttons; } //按钮个数, 0-3都有可能
     constexpr int getReadguy_user1 () const { return READGUY_user1; } //用户变量
     constexpr int getReadguy_user2 () const { return READGUY_user2; } //用户变量

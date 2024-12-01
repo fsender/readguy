@@ -103,7 +103,7 @@ void textShow(server_t sv){ //点击链接即可出现发送文本框, 点击发
 }
 void textShowGet(server_t sv){ //注册Web服务函数回调 (就是显示接口)
   const String ok_str_1=F("<html><body><meta charset=\"utf-8\">"); //网页前半部分
-  const String ok_str_2=F("<a href=\"/textshow\">重新传文字</a></body></html>"); //网页后半部分
+  const String ok_str_2=F("<br/><a href=\"/textshow\">重新传文字</a></body></html>"); //网页后半部分
   if(sv->hasArg("txt")){ //检查请求的报文 是否包含键值txt (详见前面的网页声明)
     String txt=sv->arg("txt"); //找到字段
     //-----------------showTextEpd(txt)------------------ //显示到墨水屏幕上
@@ -114,7 +114,7 @@ void textShowGet(server_t sv){ //注册Web服务函数回调 (就是显示接口
       Serial.println("Arg width == 0."); //字符串为空 或者总宽度为零
       return;
     }
-    sv->send(200, String(F("text/html")), ok_str_1+"文字显示完成: "+txt+ok_str_2); //报告显示完成
+    sv->send(200, String(F("text/html")), ok_str_1+"文字显示完成:<br/>"+txt+ok_str_2); //报告显示完成
     float tsize = ((float)guy.width())/twidth;    //计算字体大小, 此大小的目的是填满屏幕
     float fsize = ((float)guy.height())/guy.fontHeight(); //计算垂直方向的字体大小, 制定合适的显示方法
     if(tsize>fsize){ //字符太短, 字体大小取决于屏幕垂直高度

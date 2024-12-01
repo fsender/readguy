@@ -43,7 +43,7 @@
 
 #include <Arduino.h> //arduino功能基础库. 在platformIO平台上此语句不可或缺
 #include "readguy.h" //包含readguy_driver 基础驱动库
-#include <lwip/apps/sntp.h>
+#include <lwip/apps/sntp.h> // settimeofday 函数 需要
 
 ReadguyDriver guy;//新建一个readguy对象, 用于显示驱动.
 
@@ -135,7 +135,7 @@ void setup(){
 
   }while(conf_status!=2); // conf_status==2说明连接上了
   
-  WiFi.mode(WIFI_STA); //从WIFI_AP_STA模式切换到WIFI_STA模式, 不再提供readguy热点.
+  // WiFi.mode(WIFI_STA); //从WIFI_AP_STA模式切换到WIFI_STA模式, 不再提供readguy热点.
 
   guy.println("Getting NTP time..."); //连接成功之后尝试获取NTP时间
   Serial.println("[readguy] Getting NTP time..."); //连接成功之后尝试获取NTP时间
@@ -163,6 +163,11 @@ void loop(){
 //其中, sv 参数指向了一个服务器类型的变量. 当有来自客户端的请求时, 需要通过sv来发送响应消息.
 
 void f1(server_t sv){ //使用PSTR来减少对内存的消耗(不加PSTR()或者F()则字符串会存到.rodata,占用宝贵的内存)
+  if(WiFi.status() == WL_CONNECTED) { 
+    sv->send_P(200, PSTR("text/html"),PSTR(
+      "<html><body><meta charset=\"utf-8\">已连接, 不需要再配网了。</body></html>"));
+    return;
+  }
   String webpage_html = F(
   "<!DOCTYPE html>"
   "<html lang='zh-cn'>"
@@ -229,74 +234,72 @@ void f2(server_t sv){
 }
 
     /*----------------- NTP code ------------------*/
+#define NTP_SERVERS 4
 WiFiUDP udp;
 uint8_t packetBuffer[48];
 const int16_t timeZone = 8; //Beijing
 const int16_t localPort = 1337;
-time_t get_ntp_time_impl(uint8_t _server)
-{
-  const char * ntpServerName[4] = {
+time_t getNTPTime(){
+  const char * ntpServerName[NTP_SERVERS] = {
     "ntp1.aliyun.com","time.windows.com","cn.ntp.org.cn","cn.pool.ntp.org"
   };
-  char ntpHost[32];
-  IPAddress ntpServerIP; // NTP server's ip address
-  
-  while (udp.parsePacket() > 0) ; // discard any previously received packets
-  Serial.println(F("Transmit NTP Request"));
-  // get a random server from the pool
-  strncpy_P(ntpHost,ntpServerName[_server],31);
-  ntpHost[31] = '\0';
-  WiFi.hostByName(ntpHost, ntpServerIP);
-  Serial.print(FPSTR(ntpServerName[_server]));
-  Serial.write(':');
-  Serial.println(ntpServerIP);
-
-  // set all bytes in the buffer to 0
-  memset(packetBuffer, 0, 48);
-  // Initialize values needed to form NTP request
-  // (see URL above for details on the packets)
-  packetBuffer[0] = 0b11100011;   // LI, Version, Mode
-  packetBuffer[1] = 0;     // Stratum, or type of clock
-  packetBuffer[2] = 6;     // Polling Interval
-  packetBuffer[3] = 0xEC;  // Peer Clock Precision
-  // 8 bytes of zero for Root Delay & Root Dispersion
-  packetBuffer[12] = 49;
-  packetBuffer[13] = 0x4E;
-  packetBuffer[14] = 49;
-  packetBuffer[15] = 52;
-  // all NTP fields have been given values, now
-  // you can send a packet requesting a timestamp:
-  udp.beginPacket(ntpServerIP, 123); //NTP requests are to port 123
-  udp.write(packetBuffer, 48);
-  udp.endPacket();
-
-  uint32_t beginWait = millis();
-  while (millis() - beginWait < 1500) {
-    int size = udp.parsePacket();
-    if (size >= 48) {
-      Serial.println("Receive NTP Response");
-      udp.read(packetBuffer, 48);  // read packet into the buffer
-      unsigned long secsSince1900;
-      // convert four bytes starting at location 40 to a long integer
-      secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
-      secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
-      secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
-      secsSince1900 |= (unsigned long)packetBuffer[43];
-      return secsSince1900 - 2208988800UL; // + timeZone * 3600; //时区数据 舍弃即可
-    }
-  }
-  Serial.println("No NTP Response :-(");
-  return 0; // return 0 if unable to get the time
-}
-time_t getNTPTime(){
   time_t _now = 0;
   if(!WiFi.isConnected()) return 0;
   udp.begin(localPort);
   Serial.print("Local port: ");
   Serial.println(localPort);
-  for(int i=0;i<4;i++){//最多尝试10次对时请求
-      _now=get_ntp_time_impl(i);
+  for(int i=0;i<NTP_SERVERS;i++){//最多尝试10次对时请求
+      _now=0;
+      char ntpHost[32];
+      IPAddress ntpServerIP; // NTP server's ip address
+      
+      while (udp.parsePacket() > 0) ; // discard any previously received packets
+      Serial.println(F("Transmit NTP Request"));
+      // get a random server from the pool
+      strncpy_P(ntpHost,ntpServerName[i],31);
+      ntpHost[31] = '\0';
+      WiFi.hostByName(ntpHost, ntpServerIP);
+      Serial.print(FPSTR(ntpServerName[i]));
+      Serial.write(':');
+      Serial.println(ntpServerIP);
+
+      // set all bytes in the buffer to 0
+      memset(packetBuffer, 0, 48);
+      // Initialize values needed to form NTP request
+      // (see URL above for details on the packets)
+      packetBuffer[0] = 0b11100011;   // LI, Version, Mode
+      packetBuffer[1] = 0;     // Stratum, or type of clock
+      packetBuffer[2] = 6;     // Polling Interval
+      packetBuffer[3] = 0xEC;  // Peer Clock Precision
+      // 8 bytes of zero for Root Delay & Root Dispersion
+      packetBuffer[12] = 49;
+      packetBuffer[13] = 0x4E;
+      packetBuffer[14] = 49;
+      packetBuffer[15] = 52;
+      // all NTP fields have been given values, now
+      // you can send a packet requesting a timestamp:
+      udp.beginPacket(ntpServerIP, 123); //NTP requests are to port 123
+      udp.write(packetBuffer, 48);
+      udp.endPacket();
+
+      uint32_t beginWait = millis();
+      while (millis() - beginWait < 1500) {
+        int size = udp.parsePacket();
+        if (size >= 48) {
+          Serial.println("Receive NTP Response");
+          udp.read(packetBuffer, 48);  // read packet into the buffer
+          unsigned long secsSince1900;
+          // convert four bytes starting at location 40 to a long integer
+          secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
+          secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
+          secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
+          secsSince1900 |= (unsigned long)packetBuffer[43];
+          _now = secsSince1900 - 2208988800UL; // + timeZone * 3600;
+          break;
+        }
+      }// return 0 if unable to get the time
       if(_now) break; //成功后立即退出
+      else Serial.println("No NTP Response :-(");
       yield();
   }
   if(_now){

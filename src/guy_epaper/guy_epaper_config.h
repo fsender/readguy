@@ -59,7 +59,7 @@
 //#define READGUY_DEV_154C    14 //(即将推出) 1.54寸M09墨水屏 (M5Stack Core-Ink 同款; GDEW0154M09)
 //#define READGUY_DEV_370B    15 //(即将推出) 3.7寸低DPI墨水屏, 分辨率416*240, b站 @叫我武哒哒 的项目用
 //#define READGUY_DEV_426A    16 //(即将推出) 4.26寸高分辨率墨水屏, 800*480. GDEQ0426T82 支持硬件四灰
-#define READGUY_DEV_583A    17 //(即将推出) 5.83寸墨水屏幕, 分辨率为600*448. 有黑白有三色
+#define READGUY_DEV_583A    17 // 5.83寸墨水屏幕, 分辨率为600*448. 有黑白有三色
 //#define READGUY_DEV_583B    18 //(即将推出) 5.83寸高分辨率, 640*480. GDEQ0583T31 只有黑白
 //#define READGUY_DEV_750A    19 //(即将推出) 7.5 寸墨水屏幕, 800*480. 只有三色(买不到黑白)
 //#define READGUY_DEV_1020A   20 //(即将推出) 10.2寸墨水屏GDEQ102T90, 芯片SSD1677. 黑白色分辨率960*640
@@ -68,7 +68,7 @@
 
 #define EPD_DRIVERS_NUM_MAX 21 //此选项请不要取消注释掉, 有几个屏幕就写多少.
 
-#define READGUY_583A_DUAL_BUFFER //对于单缓存的5.83屏幕, 启用双缓存支持
+#define READGUY_583A_DUAL_BUFFER //对于单缓存的5.83屏幕,启用双缓存支持. 相当不建议注释掉,否则不能刷白色
 
 #endif /* END OF FILE. ReadGuy project.
 Copyright (C) 2023 FriendshipEnder. */

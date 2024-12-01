@@ -59,6 +59,7 @@ SOFTWARE.
 
 */
 #include "guy_button.h"
+#include "guy_driver_config.h"
 
 // initalize static counter
 
@@ -75,11 +76,11 @@ void guy_button::begin(uint8_t _pin, std_U8_function_U8 f, bool activeLow/*=true
   prev_state = state ;
   get_state_cb = f;
   pin = _pin;
-  state = get_state_cb(pin);
-  min_debounce    =25;   //去抖时间
-  long_press_ms   =300;  //长按持续时间
-  double_press_ms =300;  //双击识别间隔最大时间
-  long_repeat_ms  =200;  //长按连按间隔时间
+  state = get_state_cb(pin, activeLow);
+  min_debounce    =READGUY_DEFAULT_MIN_DEBOUNCE_MS;   //去抖时间
+  long_press_ms   =READGUY_LONG_PRESS_MS;  //长按持续时间
+  double_press_ms =READGUY_DOUBLE_PRESS_MS;  //双击识别间隔最大时间
+  long_repeat_ms  =READGUY_LONG_REPEAT_MS;  //长按连按间隔时间
   scanDT          =1;    // =1识别双击或三击, =0则不识别双击或三击等需要延时返回的情况
   lk=0;
 }
@@ -87,7 +88,7 @@ bool guy_button::isPressedRaw() {
   int mi=millis();
   while(lk) if(millis()-mi>GUYBTN_READ_TIMEOUT) return 0; //等待数据读完
   lk=3;
-  bool willreturn = (get_state_cb(pin) == _pressedState);
+  bool willreturn = (get_state_cb(pin, !_pressedState) == _pressedState);
   lk=0;
   return willreturn;
 }
@@ -116,7 +117,7 @@ void guy_button::loop() {
   lk=1;
   unsigned long now = millis();
   prev_state = state;
-  state = get_state_cb(pin);
+  state = get_state_cb(pin, !_pressedState);
   
   // is button pressed?
   if (state == _pressedState) {
