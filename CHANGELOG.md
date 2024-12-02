@@ -1,3 +1,7 @@
+## Release 1.4.1 - 2024/12/2
+
+1. 紧急修复了在禁用 `DYNAMIC_PIN_SETTINGS` 之后点不亮屏幕的bug
+
 ## Release 1.4.0 - 2024/12/1
 
 ### 新增内容

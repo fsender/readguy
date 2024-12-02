@@ -373,7 +373,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
 #else
     static const int8_t config_data[32];
     int8_t READGUY_sd_ok = 0;
-    int8_t READGUY_cali = 0;
+    int8_t READGUY_cali = 127;
     int8_t READGUY_buttons = 0;  //按钮个数, 0-3都有可能
 #endif
     int16_t epdPartRefresh = 0; //连续快刷次数
