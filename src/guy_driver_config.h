@@ -71,12 +71,12 @@
 #define DYNAMIC_PIN_SETTINGS
 
 /// @brief 启用WIFI配网功能.必须先启用 #define DYNAMIC_PIN_SETTINGS. 此选项对 ESP32xx 会减少大量可用flash.
-#define READGUY_ENABLE_WIFI
+#define READGUY_ENABLE_WIFI //会破坏跨平台特性
 
 /** @brief 启用I2C功能. 可用于联网时钟, 温度计, 陀螺仪等外设. 目前暂不支持库内使用类似函数. 仅可以提供引脚定义
 /   @note 现在库提供了获取已存的I2C引脚的接口, 使用时请使用 getI2cSda() 和 getI2cScl() 函数获取I2C的引脚.
 /       本库内不提供任何I2C驱动, 只提供引脚定义的存储和读取, 这几乎不增加多少代码. 因此本宏不再使用 */
-//#define READGUY_ENABLE_I2C
+//#define READGUY_ENABLE_I2C //已经弃用
 
 /** @brief 启用SD卡功能. 开启此功能将会使用内置SD卡管理功能. 关闭后仅可保存SD卡用到的引脚.
 /   @note 会破坏兼容性. 若没有启用通用的SD卡驱动程序, 那么那些跨屏台编译的程序将无法用guyFS读取到SD卡.
@@ -152,7 +152,7 @@
 /// @brief debug专用, 请保持处于注释状态. 正常开机从NVS读取引脚配置数据, 取消注释则每次开机需要重新配置
 //#define READGUY_INDEV_DEBUG 1
 
-/// @brief 串口显示刷屏功能等的信息. 建议开启, 如果是对flash要求十分敏感 可以关闭
+/// @brief 串口显示刷屏功能等的信息. 如果是对flash大小要求十分敏感, 或者希望减少串口数据, 可以关闭
 #define READGUY_SERIAL_DEBUG
 
 #ifndef DYNAMIC_PIN_SETTINGS

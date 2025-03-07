@@ -8,9 +8,43 @@
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
  * @version 1.0
  * @date create: 2023-11-01
- * last modify: 2023-11-06
- * @brief ReadGuy 图片显示功能演示.
+ * last modify: 2024-12-04
  * 
+ * @note 重要消息: 这是一个实验性功能. 可能你所使用的LGFX库版本较旧而无法通过编译.
+ * 
+ * (ESPxxxx系列可无视此行) 对于不支持fs::FS的设备 (如PC) 来说, 请前往 guy_image.h 文件并更改第34行的注释
+ * 
+ * 如果你的项目中无法成功编译源码中的setBuffer, 请更改LovyanGFX库的函数!
+ * 位于文件 LovyanGFX/src/lgfx/v1/LGFX_Sprite.hpp
+ * 第155行 void setBuffer 函数:
+ * 添加为如下内容并保存 (不建议修改库里原有的函数, 保证库的兼容性)
+ * 
+   ``` C++
+    void setBuffer(void* buffer, int32_t w, int32_t h, color_depth_t bpp)
+    {
+      deleteSprite();
+      if (bpp != 0) {
+        _write_conv.setColorDepth(bpp);
+        _read_conv = _write_conv;
+        _panel_sprite.setColorDepth(bpp);
+      }
+
+      _panel_sprite.setBuffer(buffer, w, h, &_write_conv);
+      _img = _panel_sprite.getBuffer();
+
+      _sw = w;
+      _clip_r = w - 1;
+      _xpivot = w >> 1;
+
+      _sh = h;
+      _clip_b = h - 1;
+      _ypivot = h >> 1;
+    }
+   ```
+ * 完成后请再次尝试编译
+ * [已经向lovyan03/LovyanGFX发布issue, 等待解决]
+ * 
+ * @brief ReadGuy 图片显示功能演示.
  * - 演示如何将比较大的图片通过多种方法显示到屏幕上.
  * - 运行的会很缓慢, 因为示例的图片文件比较大.
  * 1. 在运行过ex01或者ex02的开发板上 编译烧录本程序.
@@ -105,37 +139,6 @@
  * 该函数可以根据输入的像素坐标位置来决定输出的像素颜色.
  * 为了简化程序调用过程并提高调用速度, 此处的像素坐标位置参数为一个整数(而不是两个)
  * 至于该怎么调用这个函数, 并不是你需要了解的事情.
- * 
- * @note 重要消息: 这是一个实验性功能. 可能你所使用的LGFX库版本较旧而无法通过编译.
- * 如果你的项目中无法成功编译源码中的setBuffer, 请更改LovyanGFX库的函数!
- * 位于文件 LovyanGFX/src/lgfx/v1/LGFX_Sprite.hpp
- * 第155行 void setBuffer 函数:
- * 修改为如下内容并保存
- * 
-   ``` C++
-    void setBuffer(void* buffer, int32_t w, int32_t h, color_depth_t bpp = rgb565_2Byte)
-    {
-      deleteSprite();
-      if (bpp != 0) {
-        _write_conv.setColorDepth(bpp);
-        _read_conv = _write_conv;
-        _panel_sprite.setColorDepth(bpp);
-      }
-
-      _panel_sprite.setBuffer(buffer, w, h, &_write_conv);
-      _img = _panel_sprite.getBuffer();
-
-      _sw = w;
-      _clip_r = w - 1;
-      _xpivot = w >> 1;
-
-      _sh = h;
-      _clip_b = h - 1;
-      _ypivot = h >> 1;
-    }
-   ```
- * 完成后请再次尝试编译
- * [已经向lovyan03/LovyanGFX发布issue, 等待解决]
  * 
  * @attention
  * Copyright (c) 2022-2023 FriendshipEnder
@@ -263,7 +266,9 @@ void setup(){
   readguyImage im(guy);          //定义一个绘制器, 此类中的函数用于绘制图片.
                                  //所有的绘制图片的参数均需要放入此结构内
                                  //直接更改im内的数据即可设置绘制参数. (就像结构体一样用它)
+#ifdef FS_POINTER                //对于不支持fs::FS的设备来说, 请前往 guy_image.h 文件并更改第34行的注释
   im.baseFs=&guy.guyFS();        //在此处就是设置文件系统.
+#endif
 
   im.filename=BMP_FILE;          //在此直接设置文件路径和文件名.
 

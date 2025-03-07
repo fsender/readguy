@@ -9,6 +9,40 @@
  * @version 1.0
  * @date 2023-11-01
 
+ * @note 重要消息: 这是一个实验性功能. 可能你所使用的LGFX库版本较旧而无法通过编译.
+ * 
+ * (ESPxxxx系列可无视此行) 对于不支持fs::FS的设备 (如PC) 来说, 请前往 guy_image.h 文件并更改第34行的注释
+ * 
+ * 如果你的项目中无法成功编译源码中的setBuffer, 请更改LovyanGFX库的函数!
+ * 位于文件 LovyanGFX/src/lgfx/v1/LGFX_Sprite.hpp
+ * 第155行 void setBuffer 函数:
+ * 添加为如下内容并保存 (不建议修改库里原有的函数, 保证库的兼容性)
+ * 
+   ``` C++
+    void setBuffer(void* buffer, int32_t w, int32_t h, color_depth_t bpp)
+    {
+      deleteSprite();
+      if (bpp != 0) {
+        _write_conv.setColorDepth(bpp);
+        _read_conv = _write_conv;
+        _panel_sprite.setColorDepth(bpp);
+      }
+
+      _panel_sprite.setBuffer(buffer, w, h, &_write_conv);
+      _img = _panel_sprite.getBuffer();
+
+      _sw = w;
+      _clip_r = w - 1;
+      _xpivot = w >> 1;
+
+      _sh = h;
+      _clip_b = h - 1;
+      _ypivot = h >> 1;
+    }
+   ```
+ * 完成后请再次尝试编译
+ * [已经向lovyan03/LovyanGFX发布issue, 等待解决]
+ * 
  * @attention
  * Copyright (c) 2022-2023 FriendshipEnder
  * 
@@ -78,15 +112,33 @@ uint8_t readguyImage::drawImgHandler(int r, LGFX_Sprite *spr){
     spr->setRotation(rot);
     switch(format&3){
       case 1:
-        spr->drawBmpFile(*baseFs,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
+        spr->drawBmpFile(
+#ifdef FS_POINTER
+          *baseFs
+#else
+          guy->guyFS()
+#endif
+          ,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
         break;
 #ifndef ESP8266
       case 2:
-        spr->drawPngFile(*baseFs,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
+        spr->drawPngFile(
+#ifdef FS_POINTER
+          *baseFs
+#else
+          guy->guyFS()
+#endif
+          ,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
         break;
 #endif
       case 3:
-        spr->drawJpgFile(*baseFs,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
+        spr->drawJpgFile(
+#ifdef FS_POINTER
+          *baseFs
+#else
+          guy->guyFS()
+#endif
+          ,filename,_x,_y,0,0,offsetx+xd,offsety+yd,scalex,scaley,datum);
         break;
     }
     spr->setRotation(0);
@@ -219,7 +271,11 @@ uint8_t readguyImage::getExName(const char* fname, char* exname, size_t exname_l
 
 /// @brief 显示图像
 void readguyImage::drawImageFile(bool use16grey){
-  if(filename == nullptr || filename[0] == 0 || !(baseFs->exists(filename))) return; //文件不存在
+  if(filename == nullptr || filename[0] == 0
+#ifdef FS_POINTER
+   || !(baseFs->exists(filename))
+#endif
+  ) return; //文件不存在
   char ex[8]; //保存文件的扩展名
   getExName(filename,ex,7); //获取文件的扩展名.最后一个参数用于防止数组越界
   format = 0; //16灰度模式
@@ -243,6 +299,7 @@ void readguyImage::drawImageFile(bool use16grey){
   LGFX_Sprite bmpspr;
   //首先, 需要获取到内部显存的地址, 用于建立图片分块绘制缓存.
   //获取屏幕缓存, 随后分配图片解码所需的内存.
+  //此处如果出现 convert from `lgfx::v1::color_depth_t` to `uint8_t` 警告(或错误) 请查看本文开头重要消息
   bmpspr.setBuffer(_pool,w,_h,lgfx::v1::color_depth_t::grayscale_8bit);
   //bmpspr.createSprite(guy_width,(guy_height+7)&0x7ffffff8);
 
@@ -286,7 +343,11 @@ void readguyImage::drawImageFile(bool use16grey){
 }
 
 uint8_t readguyImage::drawImageToBuffer(){
-  if(filename == nullptr || filename[0] == 0 || !(baseFs->exists(filename))) return 1; //文件不存在
+  if(filename == nullptr || filename[0] == 0
+#ifdef FS_POINTER
+   || !(baseFs->exists(filename))
+#endif
+  ) return 1; //文件不存在
   if( w==0 || h==0 || w>=0x8000 || h>=0x8000 || exPool==nullptr || exPoolSize<1024) return 3; //内存不足
   char ex[8]; //保存文件的扩展名
   format = 0; //16灰度模式
@@ -309,20 +370,39 @@ uint8_t readguyImage::drawImageToBuffer(){
   if(_h==0 || GUY_STAGES>8) return 3; //内存不足以在显示8次之内就... 总之就是内存不够
 
   LGFX_Sprite spr;
+  //此处如果出现 convert from `lgfx::v1::color_depth_t` to `uint8_t` 警告(或错误) 请查看本文开头重要消息
   spr.setBuffer(_pool,w,_h,lgfx::v1::color_depth_t::grayscale_8bit);
   for(int i=0;i<GUY_STAGES;i++){
     spr.fillScreen(background?0xffff:0);
     switch(format&3){
       case 1:
-        spr.drawBmpFile(*baseFs,filename,0,0,0,0,offsetx,offsety+_h*i,scalex,scaley);
+        spr.drawBmpFile(
+#ifdef FS_POINTER
+          *baseFs
+#else
+          guy->guyFS()
+#endif
+          ,filename,0,0,0,0,offsetx,offsety+_h*i,scalex,scaley);
         break;
 #ifndef ESP8266
       case 2:
-        spr.drawPngFile(*baseFs,filename,0,0,0,0,offsetx,offsety+_h*i,scalex,scaley);
+        spr.drawPngFile(
+#ifdef FS_POINTER
+          *baseFs
+#else
+          guy->guyFS()
+#endif
+          ,filename,0,0,0,0,offsetx,offsety+_h*i,scalex,scaley);
         break;
 #endif
       case 3:
-        spr.drawJpgFile(*baseFs,filename,0,0,0,0,offsetx,offsety+_h*i,scalex,scaley);
+        spr.drawJpgFile(
+#ifdef FS_POINTER
+          *baseFs
+#else
+          guy->guyFS()
+#endif
+          ,filename,0,0,0,0,offsetx,offsety+_h*i,scalex,scaley);
         break;
     }
     guy->drawImageStage(spr,x,y+_h*i,i,GUY_STAGES);

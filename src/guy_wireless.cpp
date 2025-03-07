@@ -28,9 +28,9 @@
  */
 
 #include "readguy.h"
-/* #if (!defined(ESP8266)) //for ESP32, ESP32S2, ESP32S3, ESP32C3
+#if (!defined(ESP8266)) //for ESP32, ESP32S2, ESP32S3, ESP32C3
 #include "esp_flash.h"
-#endif */
+#endif
 
 #ifdef READGUY_ESP_ENABLE_WIFI
 static const PROGMEM char NOT_SUPPORTED[] = "(不支持此屏幕)";

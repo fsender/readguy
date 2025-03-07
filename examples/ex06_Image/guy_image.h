@@ -9,6 +9,40 @@
  * @version 1.0
  * @date 2023-11-01
 
+ * @note 重要消息: 这是一个实验性功能. 可能你所使用的LGFX库版本较旧而无法通过编译.
+ * 
+ * (ESPxxxx系列可无视此行) 对于不支持fs::FS的设备 (如PC) 来说, 请前往 guy_image.h 文件并更改第34行的注释
+ * 
+ * 如果你的项目中无法成功编译源码中的setBuffer, 请更改LovyanGFX库的函数!
+ * 位于文件 LovyanGFX/src/lgfx/v1/LGFX_Sprite.hpp
+ * 第155行 void setBuffer 函数:
+ * 添加为如下内容并保存 (不建议修改库里原有的函数, 保证库的兼容性)
+ * 
+   ``` C++
+    void setBuffer(void* buffer, int32_t w, int32_t h, color_depth_t bpp)
+    {
+      deleteSprite();
+      if (bpp != 0) {
+        _write_conv.setColorDepth(bpp);
+        _read_conv = _write_conv;
+        _panel_sprite.setColorDepth(bpp);
+      }
+
+      _panel_sprite.setBuffer(buffer, w, h, &_write_conv);
+      _img = _panel_sprite.getBuffer();
+
+      _sw = w;
+      _clip_r = w - 1;
+      _xpivot = w >> 1;
+
+      _sh = h;
+      _clip_b = h - 1;
+      _ypivot = h >> 1;
+    }
+   ```
+ * 完成后请再次尝试编译
+ * [已经向lovyan03/LovyanGFX发布issue, 等待解决]
+ * 
  * @attention
  * Copyright (c) 2022-2023 FriendshipEnder
  * 
@@ -30,14 +64,10 @@
 #ifndef _GUY_IMAGE_H_FILE
 #define _GUY_IMAGE_H_FILE
 
+#define FS_POINTER //如果你的系统不是ESP系列, 没有FS.h文件也没有File类则注释掉它
+
 #include <Arduino.h>
-#include <SPI.h>
-#include <FS.h>
-
-#define LGFX_USE_V1
-#include <LovyanGFX.hpp>
 #include "readguy.h"
-
 
 class readguyImage{
   public:
@@ -67,7 +97,9 @@ class readguyImage{
     /// @brief 获取文件的扩展名.
     static uint8_t getExName(const char* fname, char* exname, size_t exname_len);
 
+#ifdef FS_POINTER
     fs::FS *baseFs = nullptr;///     // /  //要绘制的图片所属的文件系统
+#endif
     const char *filename = nullptr; // /  //要绘制的图片的文件名和文件路径
     int32_t x = 0;        ////     // /  //绘制位置坐标X
     int32_t y = 0;       ////     // /  //绘制位置坐标Y
