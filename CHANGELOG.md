@@ -1,3 +1,10 @@
+1.4.2
+## Release 1.4.2 - 2025/3/11
+
+1. 现在程序可以在Arduino-ESP32的版本高于3.0.0的Arduino集成环境和ESP-IDF (仍需依赖Arduino component, 但不依赖PlatformIO) 中编译成功
+
+2. 示例程序中添加了更多的说明文本
+
 ## Release 1.4.1 - 2024/12/2
 
 1. 紧急修复了在禁用 `DYNAMIC_PIN_SETTINGS` 之后点不亮屏幕的bug

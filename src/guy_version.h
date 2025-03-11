@@ -6,7 +6,7 @@
  * @file guy_version.h
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
  * @brief readguy 版本控制文件.
- * @version 1.3.2
+ * @version 1.4.2
  * @date 2023-09-21
 
  * @attention
@@ -41,9 +41,9 @@
 //另外, 在提交新版本之前, 不要忘记在github上创建release, 否则Arduino IDE会读不到
 #define READGUY_V_MAJOR 1
 #define READGUY_V_MINOR 4
-#define READGUY_V_PATCH 1
+#define READGUY_V_PATCH 2
 #define READGUY_VERSION_VAL (READGUY_V_MAJOR*1000+READGUY_V_MINOR*100+READGUY_V_PATCH*10)
-#define READGUY_VERSION "1.4.1"
+#define READGUY_VERSION "1.4.2"
 
 #ifdef ESP8266
 #define _READGUY_PLATFORM "ESP8266"

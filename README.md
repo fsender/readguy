@@ -4,17 +4,17 @@
 
 <img src="extra/artset/readguy_theme3.png" width="30%" height="auto">
 
-**版本1.4.1正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
+**版本1.4.2正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
 
 **即将发布7个全新的屏幕驱动: 欢迎支持! (详见后面的驱动表格)**
 
 欢迎克隆, 项目交流QQ群: 926824162 (萌新可以进来问问题的哟), 项目的 Bilibili 主页: [BV1f94y187wz](https://www.bilibili.com/video/BV1f94y187wz/) 记得三连+关注我这个宝藏up主哦~
 
-注意, 有问题一定要先加群问, 先不要提issue, 提了小影 *(也就是作者FriendshipEnder)* 也不会看的.
+注意, 有问题一定要先加群问, 先不要提issue, 提了作者 FriendshipEnder 也不会看的.
 
 **依赖的库: [LovyanGFX](https://github.com/lovyan03/LovyanGFX)**
 
-*依赖的环境: Arduino-ESP8266 或者 Arduino-ESP32.*
+*依赖的环境: Arduino-ESP8266 或者 Arduino-ESP32. 现已支持使用最新版本的Arduino-ESP32库(2.x和3.x)编译!*
 
 ## 在**所有**受支持屏幕上都显示**16级灰度**内容！
 
