@@ -367,7 +367,7 @@ void ReadguyDriver::handleInitPost(){
     }
   }
   //尝试初始化各个硬件, 可能失败, 然后显示一些东西
-#if (defined(ESP8266) || defined(CONFIG_IDF_TARGET_ESP32C3))
+#if (defined(ESP8266) || defined(READGUY_IDF_TARGET_WITHOUT_FSPI))
   if(config_data[3]==-1) config_data[3] = config_data[10];
   else config_data[10] = config_data[3];
   if(config_data[4]==-1) config_data[4] = config_data[11];
@@ -514,7 +514,7 @@ void ReadguyDriver::handlePinSetup(){
     "甘草半糖板","微雪例程"
   };
   */
-#elif (defined(CONFIG_IDF_TARGET_ESP32C3))
+#elif (defined(READGUY_IDF_TARGET_WITHOUT_FSPI))
 #define DRIVER_TEMPLATE_N 0
 #define DRIVER_TEMPLATE_ARRAY_L 16
 /*
@@ -574,7 +574,7 @@ void ReadguyDriver::handlePinSetup(){
 #else
   for(int i=0;i<12;i++){
     s += F("<br/>");
-#if defined(CONFIG_IDF_TARGET_ESP32C3)
+#if defined(READGUY_IDF_TARGET_WITHOUT_FSPI)
     if(i==7) {
       i+=2; //优化ESP32C3的SPI配置体验 (C3只能共线)
       s += F("(ESP32C3不支持SD卡独立SPI总线! SD_MOSI和SD_SCLK沿用EPDMOSI和EPDSCLK)<br/>");
@@ -770,7 +770,7 @@ const PROGMEM char ReadguyDriver::index_cn_html[] = // then write EpdMOSI pin
 "将引脚配置输入到框内, 即可成功点亮屏幕.</p><hr/><h2>引脚定义设定</h2><form "
 "name=\"input\" action=\"/verify\" method=\"POST\">";
 const PROGMEM char ReadguyDriver::index_cn_html2[] =
-#if (!defined(ESP8266) && !defined(CONFIG_IDF_TARGET_ESP32C3))
+#if (!defined(ESP8266) && !defined(READGUY_IDF_TARGET_WITHOUT_FSPI))
 "<input type=\"checkbox\" name=\"share\" value=\"1\">墨水屏和SD卡共享SPI<br/>"
 #endif
 "E-paper 型号<select id=\"et\" onchange=\"ct()\" name=\"epdtype\">";

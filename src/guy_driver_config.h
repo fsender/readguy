@@ -39,15 +39,18 @@
 
 // *** Do not include any file here!
 
-/*
-#define _EPD_CS_PIN 15 //D8, 显示屏的片选引脚
-#define _EPD_DC_PIN 5 //D1, 显示屏的DC引脚
-#define _EPD_RST_PIN -1 //reserved 保留的重置引脚
-#define _EPD_BUSY_PIN 4 //D2 显示屏的Busy引脚
-#define _SD_CS_PIN 0 //D3, SD卡的片选引脚
-#define _BtnL 5 //D1, 左键
-#define _BtnM 12 //中间键 D6引脚
-#define _BtnR 2 //D4 右键
+/**************************** 请不要取消注释这里! *****************************
+ ********* 这里的设置项是无效的, 仅仅用于标注一些开发板的引脚预定义数据. *********
+ ********** 部分热门的, 创新的带墨水屏开发板的引脚定义可能会罗列在这里. **********
+ *****************************************************************************
+(无效设置项) #define _EPD_CS_PIN 15 //D8, 显示屏的片选引脚
+(无效设置项) #define _EPD_DC_PIN 5 //D1, 显示屏的DC引脚
+(无效设置项) #define _EPD_RST_PIN -1 //reserved 保留的重置引脚
+(无效设置项) #define _EPD_BUSY_PIN 4 //D2 显示屏的Busy引脚
+(无效设置项) #define _SD_CS_PIN 0 //D3, SD卡的片选引脚
+(无效设置项) #define _BtnL 5 //D1, 左键
+(无效设置项) #define _BtnM 12 //中间键 D6引脚
+(无效设置项) #define _BtnR 2 //D4 右键
 
 //对于甘草酸不酸的新版本板子:
 //busy 4 rst 2 dc 0 cs 15 sck / mosi / sdcs 5 btnL rx(3) btnM 0
@@ -231,10 +234,35 @@
 #endif
 
 #define READGUY_rtc_type 0  //使用的RTC型号. 现已弃用 RTC 功能. 保留是为了兼容性 让代码更简单维护
-#elif defined(READGUY_ENABLE_WIFI)
+
+// ******************************************************************
+// ********************** 以下内容不建议用户更改 **********************
+// ******************************************************************
+#elif defined(READGUY_ENABLE_WIFI) // READGUY_ENABLE_WIFI 依赖 DYNAMIC_PIN_SETTINGS
 #define READGUY_ESP_ENABLE_WIFI //使用WIFI进行配网等功能
 #endif
 #undef READGUY_ENABLE_WIFI
+
+#ifdef ESP8266 //应用于
+#define _READGUY_PLATFORM "ESP8266"
+#define READGUY_IDF_TARGET_WITHOUT_FSPI //该器件不能使用fspi
+#else
+#ifdef CONFIG_IDF_TARGET_ESP32
+#define _READGUY_PLATFORM "ESP32"
+#define READGUY_IDF_TARGET_WITH_VSPI //该器件拥有vspi
+#elif defined(CONFIG_IDF_TARGET_ESP32S2)
+#define _READGUY_PLATFORM "ESP32S2"
+#elif defined(CONFIG_IDF_TARGET_ESP32S3)
+#define _READGUY_PLATFORM "ESP32S3"
+#elif defined(CONFIG_IDF_TARGET_ESP32C3)
+#define _READGUY_PLATFORM "ESP32C3"
+#define READGUY_IDF_TARGET_WITHOUT_FSPI //该器件不能使用fspi
+#else
+#define _READGUY_PLATFORM "Unknown" //Prepare for ESP32-C6, H7, etc.
+#warning Unknown platform! Readguy will run with unexpected (maybe hardware) errors!
+#define READGUY_IDF_TARGET_WITHOUT_FSPI //该器件不能使用fspi
+#endif
+#endif
 
 #endif /* END OF FILE. ReadGuy project.
 Copyright (C) 2023 FriendshipEnder. */

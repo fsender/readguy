@@ -45,22 +45,6 @@
 #define READGUY_VERSION_VAL (READGUY_V_MAJOR*1000+READGUY_V_MINOR*100+READGUY_V_PATCH*10)
 #define READGUY_VERSION "1.4.2"
 
-#ifdef ESP8266
-#define _READGUY_PLATFORM "ESP8266"
-#else
-#ifdef CONFIG_IDF_TARGET_ESP32
-#define _READGUY_PLATFORM "ESP32"
-#elif defined(CONFIG_IDF_TARGET_ESP32S2)
-#define _READGUY_PLATFORM "ESP32S2"
-#elif defined(CONFIG_IDF_TARGET_ESP32S3)
-#define _READGUY_PLATFORM "ESP32S3"
-#elif defined(CONFIG_IDF_TARGET_ESP32C3)
-#define _READGUY_PLATFORM "ESP32C3"
-#else
-#define _READGUY_PLATFORM "Unknown"
-#endif
-#endif
-
 #define _GITHUB_LINK      "https://github.com/fsender/readguy"
 #define _BILIBILI_LINK    "https://www.bilibili.com/video/BV1f94y187wz"
 
