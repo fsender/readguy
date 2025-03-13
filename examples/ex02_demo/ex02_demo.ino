@@ -199,7 +199,7 @@ void setup(){
   //使用guy.guyFS()函数返回可用的文件系统. 默认为SD卡. 当SD卡不可用时, 自动切换到内置的LittleFS.
 
   //显示打开的图片信息(宽度和高度), 和剩余内存
-  Serial.printf("[%lu] sp.w: %d, h: %d, res: %d.\n",millis(),sp.width(),sp.height(),guy.getFreeMem());
+  Serial.printf("[%lu] sp.w: %d, h: %d, res: %d.\n",millis(),(int)sp.width(),(int)sp.height(),guy.getFreeMem());
 
   guy.drawImage(sp,10,10);  //使用抖动像素的方式显示图片(不是灰度, 只有黑点和白点的那种显示效果)
 

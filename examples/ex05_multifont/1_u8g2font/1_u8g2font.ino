@@ -55,9 +55,9 @@
 
 ReadguyDriver guy;//新建一个readguy对象, 用于显示驱动.
 
-extern const uint8_t ctg_u8g2_wqy12_chinese1[]; //声明中文字体文件
+extern const uint8_t ctg_u8g2_wqy12_gb2312[]; //声明中文字体文件
 
-const lgfx::U8g2font cn_font(ctg_u8g2_wqy12_chinese1); //U8G2格式中文字体转化为LGFX格式字体
+const lgfx::U8g2font cn_font(ctg_u8g2_wqy12_gb2312); //U8G2格式中文字体转化为LGFX格式字体
 
 void setup(){
 
@@ -69,7 +69,7 @@ void setup(){
 
   guy.setCursor(10,10);
 
-  guy.print("中文");
+  guy.print("你好, 中文");
 
   guy.display();
 }

@@ -102,17 +102,17 @@ const unsigned char drvSSD168x::VSH_table[32]=
 
 //以下代码均为我 FriendshipEnder 原创, 呵呵哒~~
 void drvSSD168x::SetLut() {       
+	unsigned int i;
 	guy_epdCmd(0x3f);
-	guy_epdParam(greyScaling?0x07:0x22);
+	guy_epdParam(greyScaling?0x07:0x02); //greyScaling?0x07:0x22
 	guy_epdCmd(0x03);	// gate voltage
-	guy_epdParam(0x17);
+	guy_epdParam(0x17); //0x17 orig
 	guy_epdCmd(0x04);	// source voltage
 	guy_epdParam(greyScaling?pgm_read_byte(VSH_table+16+iLut):pgm_read_byte(VSH_table+iLut));
 	guy_epdParam(0xA8);	// VSH2
 	guy_epdParam(0x32);	// VSL
 	guy_epdCmd(0x2c);		// VCOM
-	guy_epdParam(0x28);
-	unsigned char i;
+	guy_epdParam(0x20); //0x28 orig
 	guy_epdCmd(0x32);
   if(_part){
     for(i=0;i<5;i++){
@@ -160,6 +160,8 @@ void drvSSD168x::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单�
     for(int i=0;i<10;i++)  guy_epdParam(i==5?0x40:0x00);  
     guy_epdCmd(0x3C); //BorderWavefrom
     guy_epdParam(0x80);	
+    guy_epdCmd(0x18); //BorderWavefrom
+    guy_epdParam(0x80);	
 
     guy_epdCmd(0x22); 
     guy_epdParam(0xC0);   
@@ -172,9 +174,10 @@ void drvSSD168x::drv_dispWriter(std::function<uint8_t(int)> f,uint8_t m){ //单�
       epd_PowerOn=1;
       _part=0;
       iLut=15;
+      guy_epdBusy(20);   
     }
     guy_epdCmd(0x12);  //SWRESET
-    guy_epdBusy(10);   
+    guy_epdBusy(20);   
     
     guy_epdCmd(0x01); //Driver output control      
     guy_epdParam((epdHeight-1)&0xff);

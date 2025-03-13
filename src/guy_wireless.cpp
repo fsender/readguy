@@ -704,7 +704,8 @@ void ReadguyDriver::handleFinal(){
 #else
   uint64_t gotID;
   esp_flash_read_unique_chip_id(esp_flash_default_chip,&gotID);
-  sprintf(cbuf, "%016llx", gotID);
+  //sprintf(cbuf, "%016llx", gotID);
+  sprintf(cbuf, "%08x%08x",(unsigned int)(gotID>>32),(unsigned int)(gotID&0xffffffffu));
 #endif
   s+=cbuf;
   s+=F("<br/>闪存容量: ");

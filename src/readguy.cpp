@@ -328,7 +328,7 @@ uint8_t ReadguyDriver::checkEpdDriver(){
 void ReadguyDriver::setEpdDriver(bool initepd, bool initGFX){
   guy_dev->spi_tr_release = in_release;
   guy_dev->spi_tr_press   = in_press;
-  if(initepd) guy_dev->drv_init(); //初始化epd驱动层
+  guy_dev->drv_init(); //初始化epd驱动层
   //if(g_width) guy_width = g_width;
   //else guy_width = guy_dev->drv_width(); //宽度必须是8的倍数, 但这个可以由GFX自动计算
   //if(g_height) guy_height = g_height;
@@ -351,6 +351,7 @@ void ReadguyDriver::setEpdDriver(bool initepd, bool initGFX){
 #ifdef READGUY_SERIAL_DEBUG
   Serial.printf_P(PSTR("[Guy EPD] EPD init OK(%d): w: %d, h: %d\n"),guy_dev->drv_ID(),guy_dev->drv_width(),guy_dev->drv_height());
 #endif
+  if(initepd) display(READGUY_SLOW); //25/3/13:feat: 如果initepd为true说明墨水屏需要从上电or休眠初始化, 必定慢刷
 }
 #ifdef READGUY_ENABLE_SD
 bool ReadguyDriver::setSDcardDriver(){
@@ -524,12 +525,15 @@ void ReadguyDriver::setButtonDriver(){
       analogWrite(READGUY_bl_pin,currentBright);
 #else
 #if (defined ( ESP_IDF_VERSION_VAL ) && (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)))
-      ledcAttach(READGUY_bl_pin,8000,8);
+      //ledcAttach(READGUY_bl_pin,8000,8);
+      analogWrite(READGUY_bl_pin, currentBright);
+      analogWriteFrequency(READGUY_bl_pin, 8000); //esp32宜快一些, 减少频闪影响
+      analogWriteResolution(READGUY_bl_pin, 8); //其实完全可以再快点的
 #else
       ledcSetup(0, 8000, 8);
       ledcAttachPin(READGUY_bl_pin, 0);//稍后加入PWM驱动...
-#endif
       ledcWrite(0, currentBright);
+#endif
 #endif
     }
     else {
@@ -567,10 +571,12 @@ fs::FS &ReadguyDriver::guyFS(uint8_t initSD){
 void ReadguyDriver::setBright(int d){
   if(currentBright>=0 && d>=0 && d<=255){
     currentBright=d;
-#ifdef ESP8266
+#if ((defined (ESP8266)))
     analogWrite(READGUY_bl_pin,d);
 #else
+#if (defined ( ESP_IDF_VERSION_VAL ) && (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)))
     ledcWrite(0, d);
+#endif
 #endif
   }
   else if(currentBright>=-2 && currentBright<0){ //-1为不支持PWM的亮起,-2为不支持PWM的熄灭
