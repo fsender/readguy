@@ -432,7 +432,7 @@ void ReadguyDriver::handleInitPost(){
   drawRect((guy_dev->drv_width()>>1)-46+48,(guy_dev->drv_height()>>1)-14,20,28,0);
   drawRect((guy_dev->drv_width()>>1)-46+72,(guy_dev->drv_height()>>1)-14,20,28,0);
   refresh_begin(0);
-  guy_dev->drv_fullpart(1);
+  guy_dev->drv_fullpart(0);
   guy_dev->_display((const uint8_t*)getBuffer());
 #if (defined(READGUY_ALLOW_DC_AS_BUTTON))
   refresh_end();

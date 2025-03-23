@@ -538,6 +538,7 @@ void ReadguyDriver::setButtonDriver(){
     }
     else {
       currentBright=-1; //引脚不支持PWM,设置为亮起
+      pinMode(READGUY_bl_pin, OUTPUT);
       digitalWrite(READGUY_bl_pin,HIGH);
     }
   }  //关于按键策略, 我们在此使用多个Button2的类, 然后在一个task共享变量来确定上一个按键状态
@@ -574,13 +575,18 @@ void ReadguyDriver::setBright(int d){
 #if ((defined (ESP8266)))
     analogWrite(READGUY_bl_pin,d);
 #else
-#if (defined ( ESP_IDF_VERSION_VAL ) && (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)))
+#if (defined ( ESP_IDF_VERSION_VAL ) )
+#if ( (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)))
+    analogWrite(READGUY_bl_pin,d);
+#else
     ledcWrite(0, d);
+#endif
 #endif
 #endif
   }
   else if(currentBright>=-2 && currentBright<0){ //-1为不支持PWM的亮起,-2为不支持PWM的熄灭
     currentBright=d?-1:-2;
+    pinMode(READGUY_bl_pin, OUTPUT);
     digitalWrite(READGUY_bl_pin,d?HIGH:LOW);
   }
 }
@@ -699,7 +705,10 @@ void ReadguyDriver::invertDisplay(){
 }
 void ReadguyDriver::sleepEPD(){
   if(READGUY_cali==127) {
-    if(READGUY_bl_pin>=0) digitalWrite(READGUY_bl_pin, LOW); //关闭背光灯, 节省电量
+    if(READGUY_bl_pin>=0) {
+      pinMode(READGUY_bl_pin, OUTPUT);
+      digitalWrite(READGUY_bl_pin, LOW); //关闭背光灯, 节省电量
+    }
     guy_dev->drv_sleep();
   }
 }
