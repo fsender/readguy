@@ -509,11 +509,13 @@ void ReadguyDriver::setButtonDriver(){
     btn_rd[1].setLongRepeatMode(0);  //双按键 确定按键 设置为不允许连按
   }
   else if(READGUY_buttons==3){
-    btn_rd[0].long_press_ms = 20; //只有长按, 按一下也是长按,
+    //btn_rd[0].long_press_ms = 20; //只有长按, 按一下也是长按, 2025/4/7更新: 优化识别逻辑, 这样不会变慢了
     btn_rd[0].double_press_ms = 20; //不识别双击三击,
     btn_rd[0].setLongRepeatMode(1); //并且开启连按
     //2024/2/25更新:需要支持连按适配拨轮
-    btn_rd[1].enScanDT(1); //识别双击或三击(默认)    2025/3/12更新:默认开启识别, 但按下确定键的响应会稍微变慢
+    //2025/3/12更新:默认开启识别, 但按下确定键的响应会稍微变慢
+    //2025/4/7更新: 优化识别逻辑, 这样不会变慢了
+    btn_rd[1].enScanDT(0); //识别双击或三击(默认)    
     btn_rd[1].setLongRepeatMode(0); //三按键 确定按键 设置为不允许连按
     btn_rd[2].long_press_ms = 20; //只有长按, 按一下也是长按, 并且开启连按
     btn_rd[2].double_press_ms = 20; //不识别双击三击,
@@ -908,28 +910,32 @@ void ReadguyDriver::nvs_write(){
 uint8_t ReadguyDriver::getBtn_impl(){ //按钮不可用, 返回0.
   static unsigned long last=0;
   static unsigned long last2=0;
-  uint8_t res1,res2,res3,res4=0;
-  switch(READGUY_buttons){
-    case 1:
+  uint8_t res1,res2,res3=0,res4=0;
+  if(READGUY_buttons == 1){
       res1=btn_rd[0].read();
       if(res1 == 1) res4 |= 1; //点按
       else if(res1 == 2) res4 |= 4; //双击-确定
       else if(res1 == 3) res4 |= 8; //三击-返回
       else if(res1 == 4) res4 |= 2; //长按-向上翻页
-      else if(res1 == 5) res4 |= 3; //单击后长按-新增操作(可以连按)
-      break;
-    case 2:
+      else if(res1 == 5) res4 |= 16; //单击后长按-新增操作(可以连按)
+  }
+  else{ //  case 2: //3
       res1=btn_rd[0].read(); //选项上下键 两个按钮引脚都读取
       res2=btn_rd[1].read(); //确定/返回键
+      if(READGUY_buttons>=3) res3=btn_rd[2].read(); //确定/返回键
 //#if 1
-      {
-        bool newval=btn_rd[0].isPressedRaw();
-        if(newval && last2) last2=0;
-        else if(!(newval || last2)) last2=millis();  //捕获按钮松开的行为
-        if(res1 && (millis()-last>=btn_rd[1].long_press_ms) && (!btn_rd[1].isPressedRaw())){
-          //Serial.printf("[%9d] res 1 state: %d %d\n",millis(),longpresstest,pressedRawtest);
-          res4 = (res1 == 1)?1:2;      //左键点按-向下翻页
+      bool newval=btn_rd[0].isPressedRaw();
+      if(newval && last2>1) last2=0;
+      else if(!(newval || last2>1)) last2=millis();  //捕获按钮松开的行为
+      //if(newval && btn_rd[1].isPressedRaw()) last2 = 1;
+      if((res1||res3) && (millis()-last>=btn_rd[1].long_press_ms) && (!btn_rd[1].isPressedRaw())){
+        //Serial.printf("[%9d] res 1 state: %d %d\n",millis(),longpresstest,pressedRawtest);
+        if(READGUY_buttons>=3) {
+          if(res1) res4 |= 2; //点按
+          else if(res3) res4 |= 1; //点按
         }
+        else res4 = (res1 == 1)?1:2;      //左键点按-向下翻页
+        if(last2 == 1) res4 = 0;//本次触发过3事件
       }
 //#endif
       /*
@@ -939,7 +945,7 @@ uint8_t ReadguyDriver::getBtn_impl(){ //按钮不可用, 返回0.
         last=nowm;
       }
       if(res2) {
-        if(btn_rd[0].isPressedRaw()) res4 |= 3; //避免GCC警告(我常年喜欢-Werror=all
+        if(btn_rd[0].isPressedRaw()) res4 |= 16; //避免GCC警告(我常年喜欢-Werror=all
         else if(res2 == 1 && nowm>last) res4 |= 4; //右键点按-确定
         else if(res2 == 4 && nowm>last) res4 |= 8; //右键长按-返回
         last=nowm;
@@ -948,14 +954,17 @@ uint8_t ReadguyDriver::getBtn_impl(){ //按钮不可用, 返回0.
       if(res2) {
         unsigned long ts=millis();
         //Serial.printf("[%9lu] now last2: %lu, threshold %lu\n",ts,last2,ts-last2);
-        if(btn_rd[0].isPressedRaw() || ts-last2<=20) { //2024.2.25新增:  20毫秒的去抖时间 防误判
-          res4 |= 3; //避免GCC警告(我常年喜欢-Werror=all
+        if(newval || ts-last2<=20) { //2024.2.25新增:  20毫秒的去抖时间 防误判
+          res4 |= 16; //避免GCC警告(我常年喜欢-Werror=all
+          last2 = 1;
         }
         else if(res2 == 1) res4 |= 4; //右键点按-确定
+        else if(res2 == 2) res4 |= 16; //新增: 双击进入操作5
         else if(res2 == 4) res4 |= 8; //右键长按-返回
         last=ts;
       }
-      if(res4==5 || res4==6) res4=3;
+      if(res4==5 || res4==6) res4=16;
+#if 0
       break;
     case 3:
       res1=btn_rd[0].read();
@@ -966,11 +975,22 @@ uint8_t ReadguyDriver::getBtn_impl(){ //按钮不可用, 返回0.
         res4 |= ((btn_rd[0].isPressedRaw()<<1)|1);
         last=millis();
       }
-      //if(res3 && ((millis()-last)<btn_rd[0].long_repeat_ms)) res4 |=3;
-      if(res2 == 1) res4 |= 4;
-      else if(res2 == 4) res4 |= 8;
-      else if(res2 == 2) res4 |= 3; //新增: 双击进入操作5
+      //if((res2||res3) && ((millis()-last)<btn_rd[0].long_repeat_ms)) res4 |=3;
+      if(res2) {
+        unsigned long ts=millis();
+        //Serial.printf("[%9lu] now last2: %lu, threshold %lu\n",ts,last2,ts-last2);
+        if(btn_rd[0].isPressedRaw() || ts-last2<=20) { //2024.2.25新增:  20毫秒的去抖时间 防误判
+          res4 |= 16; //避免GCC警告(我常年喜欢-Werror=all
+        }
+        else if(res2 == 1) res4 |= 4; //右键点按-确定
+        else if(res2 == 4) res4 |= 8; //右键长按-返回
+        last=ts;
+      }
+      //if(res2 == 1) res4 |= 4;
+      //else if(res2 == 4) res4 |= 8;
+      //else if((res2 == 2) || ) res4 |= 16; //新增: 双击进入操作5
       break;
+#endif
   }
   return res4;
 }

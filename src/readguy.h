@@ -202,6 +202,19 @@
 #define RG_IL_CONEXP inline
 #endif
 
+enum ReadguyButtonGesture: uint8_t{
+  guyBNone    =0,
+  guyBNext    =1,
+  guyBRight   =1,
+  guyBPrev    =2,
+  guyBLeft    =2,
+  guyBSelect  =4,
+  guyBOK      =4,
+  guyBCancel  =8,
+  guyBBack    =8,
+  guyBSpecial =16
+};
+
 class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
   public:
 #ifdef READGUY_ESP_ENABLE_WIFI
@@ -338,7 +351,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     bool SDinside(bool check=true) { return check?setSDcardDriver():READGUY_sd_ok; };
     void SDdeinit() { READGUY_sd_ok = 0; }; //当SD卡被检测到拔出或不可用时, 调用此函数标记
     /// @brief 检查按钮. 当配置未完成时,按钮不可用, 返回0.
-    uint8_t getBtn() { return (READGUY_cali==127)?getBtn_impl():0; }
+    ReadguyButtonGesture getBtn() { return (READGUY_cali==127)?(ReadguyButtonGesture)getBtn_impl():guyBNone; }
     /// @brief [此函数已弃用 非常不建议使用] 根据按钮ID来检查按钮. 注意这里如果按下返回0, 没按下或者按钮无效返回1
     //uint8_t getBtn(int btnID){return btnID<getButtonsCount()?(!(btn_rd[btnID].isPressedRaw())):1;}
     /// @brief 该函数用于设置按键是否允许扫描连按
@@ -494,10 +507,10 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
 #else
         epd_spi->beginTransaction(SPISettings(ESP32_DISP_FREQUENCY, MSBFIRST, SPI_MODE0));
 #endif
-      spibz ++; 
+      spibz +=1;
     }
     static void in_release(){//SPI结束传输屏幕数据
-      spibz --;
+      spibz -=1;
 #if (defined(READGUY_ALLOW_DC_AS_BUTTON))
       if(!(spibz&0x3f))
 #else

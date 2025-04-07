@@ -40,51 +40,63 @@
 #include "readguy.h" //包含readguy_driver 基础驱动库
 
 ReadguyDriver guy;//新建一个readguy对象, 用于显示驱动.
-
+int c=1;
 void setup(){
   Serial.begin(115200); //初始化串口
   guy.init(); //初始化readguy_driver 基础驱动库. 尽管初始化过程会刷屏, 但此示例不会用到屏幕.
-  //if(guy.width()<guy.height()) guy.setRotation(1); //横向
+  if(guy.width()<200) guy.setRotation(1); //对于小屏幕, 设置横向
+  c = guy.getButtonsCount(); //此函数用于返回设备有多少个按键.
   
   Serial.println(F("[readguy] Button demo")); //显示文本 默认是不支持中文显示的.
-  guy.println("Button demo"); //显示文本 默认是不支持中文显示的.
+  guy.println(F("Button demo."));
+  guy.println(F("Press the buttons in any way!"));
+  guy.println(F("Information will show"));
+  guy.println(F("on the EPD display."));
+  guy.println();
+  guy.print(F("Your device supports "));
+  guy.printf_P(PSTR("%d button%c.\r\n"),c,c==1?' ':'s'); //显示文本
   guy.display();//刷新墨水屏.
-  guy.setButtonSpecial(true);//对于三按键系统,打开此模式将会允许双击进行特殊操作(如切换键盘)
+  //guy.setButtonSpecial(true); //对于拨轮, 无法做到按住按钮1按下按钮2
 }
 
 void loop(){
-  int val = guy.getBtn(); //此函数用于获取按键状态 没有按键按下时 返回0.
+  auto val = guy.getBtn(); //此函数用于获取按键状态 没有按键按下时 返回0.
 
-  if(val>0){
-    int c = guy.getButtonsCount(); //此函数用于返回设备有多少个按键. [最近更新的函数]
+  if(val!=guyBNone){
+    guy.fillRect(0,guy.height()-10, guy.width(),10,1);
+    guy.setCursor(2,guy.height()-10);
     switch (val){
-      case 1: //下一个  手势
-        if(c==1) guy.println("key single clicked!");
-        else if(c==2) guy.println("Left key clicked!");
-        else if(c==3) guy.println("Right key clicked!");
+      case guyBNext: //下一个  手势
+        if(c==1)      guy.println(F("key single clicked!"));
+        else if(c==2) guy.println(F("Left key clicked!"));
+        else if(c==3) guy.println(F("Right key clicked!"));
       break;
-      case 2: //上一个  手势
-        if(c==1) guy.println("key long pressed!");
-        else if(c==2) guy.println("Left key long pressed!");
-        else if(c==3) guy.println("Left key clicked!");
+      case guyBPrev: //上一个  手势
+        if(c==1)      guy.println(F("key long pressed!"));
+        else if(c==2) guy.println(F("Left key long pressed!"));
+        else if(c==3) guy.println(F("Left key clicked!"));
       break;
-      case 3: //特殊  手势
-        if(c==1) guy.println("key clicked and pressed!");
-        else if(c==2) guy.println("Right clicked at left pressing!");
-        else if(c==3) guy.println("Centre key double clicked!");
+      case guyBSpecial: //特殊  手势
+        if(c==1)      guy.println(F("key clicked and pressed!"));
+        else if(c==2) guy.println(F("Right clicked at left pressing!"));
+        else if(c==3) guy.println(F("Centre key double clicked!"));
       break;
-      case 4: //确定 手势
-        if(c==1) guy.println("key double clicked!");
-        else if(c==2) guy.println("Right key clicked!");
-        else if(c==3) guy.println("Centre key clicked!");
+      case guyBOK: //确定 手势
+        if(c==1)      guy.println(F("key double clicked!"));
+        else if(c==2) guy.println(F("Right key clicked!"));
+        else if(c==3) guy.println(F("Centre key clicked!"));
       break;
-      case 8: //返回  手势
-        if(c==1) guy.println("key triple clicked!");
-        else if(c==2) guy.println("Right key long pressed!");
-        else if(c==3) guy.println("Centre key long pressed!");
+      case guyBCancel: //返回  手势
+        if(c==1)      guy.println(F("key triple clicked!"));
+        else if(c==2) guy.println(F("Right key long pressed!"));
+        else if(c==3) guy.println(F("Centre key long pressed!"));
+      break;
+      default: //未知手势
+        guy.println(F("Unknown gesture!"));
       break;
     }
     guy.display();
+    guy.scroll(0,-8);
   }
   delay(10);
 }/* END OF FILE. ReadGuy project.
