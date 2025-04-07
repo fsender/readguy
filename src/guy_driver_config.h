@@ -7,15 +7,17 @@
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
  * @brief readguy 基础配置文件. 用户可以根据自己对库的编译需求来修改此文件.
  * 
+ * 1.5.0 新增!
+ * 在项目目录里拷贝本文件并重命名为 "readguy_user_config.h" 即可使本配置文件仅在当前项目有效
+ * 
  * 如果你希望在程序代码内包含引脚定义, 请参考此文件下方的注释来确定并编译
  * 这样就可以只针对你设计的这一个硬件来设定引脚功能.
- * 关于屏幕配置, 请参考 guy_epaper/guy_epaper_config.h 文件来配置到底哪些屏幕型号的屏幕会被包含进来
+ * 关于屏幕配置, 请参考最下方(284行到文件末尾)来配置到底哪些屏幕型号的屏幕会被包含进来
 
  * 可以禁用WiFi功能来减少程序的flash消耗
 
- * @version 1.1
  * @date create: 2023-09-21
- * last modify:  2023-11-11
+ * last modify:  2025/4/7
 
  * @attention
  * Copyright (c) 2022-2023 FriendshipEnder
@@ -73,8 +75,42 @@
 /         关闭此选项自动禁用wifi功能. 如需wifi功能需要自己在程序里加. 但也可以大幅减少flash的占用 */
 #define DYNAMIC_PIN_SETTINGS
 
+/// @brief NVS存储配置数据时用的项目名. 必须小于8个字符, 为节省内存, 项目依赖此处的内存块仅分配了8字节.
+#define READGUY_NVS_PROJECTNAME "readguy"
+
+/// @brief NVS存储配置数据时用的配置数据键名. 必须小于8个字符, 为节省内存, 项目依赖此处的内存块仅分配了8字节.
+#define READGUY_NVS_CONFIGKEY   "hwconf"
+
+/// @brief 当使用自定义驱动 (customDriver) 时会通过NVS访问驱动代码. 必须小于8个字符.
+/// @note  有关自定义驱动, 可以参考 readme 中提到的在 2.0 版本即将到来的特性.
+#define READGUY_NVS_DRIVERKEY   "driver"
+
 /// @brief 启用WIFI配网功能.必须先启用 #define DYNAMIC_PIN_SETTINGS. 此选项对 ESP32xx 会减少大量可用flash.
-#define READGUY_ENABLE_WIFI //会破坏跨平台特性
+/// @note  注释掉它会破坏跨平台特性
+#define READGUY_ENABLE_WIFI
+
+/// @brief AP配网热点的名称和密码. 不可注释
+#define READGUY_CONF_AP_SSID "readguy"
+#define READGUY_CONF_AP_PASS "12345678"
+
+/** @brief 使用服务器或者WIFI配网时, 在网页上显示项目默认的图标, 默认图标会额外占用1150字节的flash空间
+/          如果想用自己的图标数据库, 请参考配网示例, 在配置时候加入下方的代码. 此处提供了代码.
+    ``` C++
+    typedef ReadguyDriver::ReadguyWebServer* server_t; //类型名太长太繁琐, 使用typedef减短
+    typedef ReadguyDriver::serveFunc         event_t ; //存储一个WiFi功能事件.
+    const uint8_t icon[] = {}; //你的图标数据. 可直接把 *.ico 格式图标文件转化为字节数组, 拷贝到此处
+    void sendIcon(server_t sv){ sv->send_P(200, "image/x-icon", (const char *)icon,sizeof(icon)); }
+    event_t server_event={"","/favicon",sendIcon};
+    guy.server_setup(String("Custom Icon"),&server_event,1); //初始化服务器.
+    ``` */
+//#define READGUY_USE_DEFAULT_ICON
+
+/** @brief 使用MDNS域名服务. 在设备联网或者打开热点之后, 可以通过域名 readguy.local 来访问配网主页 
+/          关闭本功能可节省少许flash. 如需自定义服务名称, 则您可更改此处的字符串, 访问 <自定义名称>.local */
+//#define READGUY_MDNS_SERVICE "readguy"
+
+/// @brief 使用固件更新服务. 关闭本功能可节省少许flash. 如需自定义链接名称, 则您可更改此处的字符串.
+//#define READGUY_UPDATE_SERVER "固件更新"
 
 /** @brief 启用I2C功能. 可用于联网时钟, 温度计, 陀螺仪等外设. 目前暂不支持库内使用类似函数. 仅可以提供引脚定义
 /   @note 现在库提供了获取已存的I2C引脚的接口, 使用时请使用 getI2cSda() 和 getI2cScl() 函数获取I2C的引脚.
@@ -151,12 +187,28 @@
 
 /// @brief ESP32驱动SD卡的速率. 当ESP32在与SD卡共享SPI时, 屏幕依据此处的速率.
 #define ESP32_SD_SPI_FREQUENCY 20000000
+#define ESP32_SD_MMC_FREQUENCY 40000
 
 /// @brief debug专用, 请保持处于注释状态. 正常开机从NVS读取引脚配置数据, 取消注释则每次开机需要重新配置
 //#define READGUY_INDEV_DEBUG 1
 
 /// @brief 串口显示刷屏功能等的信息. 如果是对flash大小要求十分敏感, 或者希望减少串口数据, 可以关闭
 #define READGUY_SERIAL_DEBUG
+
+/// @brief 对于单缓存的5.83屏幕,启用双缓存支持. 相当不建议注释掉,否则不能刷白色
+#define READGUY_583A_DUAL_BUFFER
+
+/// @brief 取消此行注释来监视SPI的通信数据 (用于debug), 可以查看主控和屏幕的通信数据
+//#define MEPD_DEBUG_WAVE 16
+
+/// @brief 显示墨水屏的刷新时间, 单位是毫秒
+//#define MEPD_DEBUG_WAITTIME
+
+/// @brief 默认使用更好的floyd steinberg抖动算法,取消注释则用bayer图案抖动算法
+#define FLOYD_STEINBERG_DITHERING
+
+/// @brief 使用更好的floyd steinberg抖动算法显示16阶灰度,取消注释则使用阈值填充
+#define FLOYD_DITHERING_16GREY
 
 #ifndef DYNAMIC_PIN_SETTINGS
 #ifdef ESP8266
@@ -233,7 +285,7 @@
 #define READGUY_user10 -1 //useless
 #endif
 
-#define READGUY_rtc_type 0  //使用的RTC型号. 现已弃用 RTC 功能. 保留是为了兼容性 让代码更简单维护
+#define READGUY_rtc_type 0  //使用的RTC型号. RTC 将在2.0实装 保留是为了兼容性 让代码更简单维护
 
 // ******************************************************************
 // ********************** 以下内容不建议用户更改 **********************
@@ -242,27 +294,6 @@
 #define READGUY_ESP_ENABLE_WIFI //使用WIFI进行配网等功能
 #endif
 #undef READGUY_ENABLE_WIFI
-
-#ifdef ESP8266 //应用于
-#define _READGUY_PLATFORM "ESP8266"
-#define READGUY_IDF_TARGET_WITHOUT_FSPI //该器件不能使用fspi
-#else
-#ifdef CONFIG_IDF_TARGET_ESP32
-#define _READGUY_PLATFORM "ESP32"
-#define READGUY_IDF_TARGET_WITH_VSPI //该器件拥有vspi
-#elif defined(CONFIG_IDF_TARGET_ESP32S2)
-#define _READGUY_PLATFORM "ESP32S2"
-#elif defined(CONFIG_IDF_TARGET_ESP32S3)
-#define _READGUY_PLATFORM "ESP32S3"
-#elif defined(CONFIG_IDF_TARGET_ESP32C3)
-#define _READGUY_PLATFORM "ESP32C3"
-#define READGUY_IDF_TARGET_WITHOUT_FSPI //该器件不能使用fspi
-#else
-#define _READGUY_PLATFORM "Unknown" //Prepare for ESP32-C6, H7, etc.
-#warning Unknown platform! Readguy will run with unexpected (maybe hardware) errors!
-#define READGUY_IDF_TARGET_WITHOUT_FSPI //该器件不能使用fspi
-#endif
-#endif
 
 #endif /* END OF FILE. ReadGuy project.
 Copyright (C) 2023 FriendshipEnder. */

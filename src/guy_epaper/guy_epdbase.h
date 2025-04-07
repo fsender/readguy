@@ -35,7 +35,8 @@
 #include <FS.h>
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
-#include "guy_epaper_config.h"
+#include "../guy_config_host.h"
+#include <functional>
 
 #define FILL_WHITE ([](int)->uint8_t{return 0xff;})
 #define FILL_BLACK ([](int)->uint8_t{return 0x00;})

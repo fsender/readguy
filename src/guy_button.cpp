@@ -59,7 +59,7 @@ SOFTWARE.
 
 */
 #include "guy_button.h"
-#include "guy_driver_config.h"
+#include "guy_config_host.h"
 
 // initalize static counter
 

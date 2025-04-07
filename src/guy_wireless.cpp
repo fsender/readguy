@@ -29,7 +29,9 @@
 
 #include "readguy.h"
 #if (!defined(ESP8266)) //for ESP32, ESP32S2, ESP32S3, ESP32C3
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
 #include "esp_flash.h"
+#endif
 #endif
 
 #ifdef READGUY_ESP_ENABLE_WIFI
@@ -186,7 +188,7 @@ const char *ReadguyDriver::epd_drivers_list[EPD_DRIVERS_NUM_MAX]={
 //x==62 -> _
 //#define R2CHAR(x) (((x)==63)?42:(((x)==62)?95:(((x)>=36)?((x)+61):(((x)>=10)?((x)+55):((x)+48)))))
 void ReadguyDriver::ap_setup(){
-  return ap_setup("readguy","12345678");
+  return ap_setup(READGUY_CONF_AP_SSID,READGUY_CONF_AP_PASS);
 }
 void ReadguyDriver::ap_setup(const char *ssid, const char *pass, int m){
   //初始化WiFi AP模式, 用于将来的连接WiFi 处于已连接状态下会断开原本的连接
@@ -203,7 +205,9 @@ void ReadguyDriver::ap_setup(const char *ssid, const char *pass, int m){
 void ReadguyDriver::server_setup(const String &notify, const serveFunc *serveFuncs, int funcs){
   //启动WiFi服务器端, 这样就可以进行配网工作
   if(sfuncs!=-1) server_end(); //避免重复服务器setup
+#ifdef READGUY_UPDATE_SERVER
   httpUpdater.setup(&sv);
+#endif
   sv.on("/",         HTTP_GET,  std::bind(&ReadguyDriver::handleInit     ,this));
   sv.on("/verify",   HTTP_POST, std::bind(&ReadguyDriver::handleInitPost ,this)); //此时已经完成了引脚初始化
   sv.on("/pinsetup", HTTP_GET,  std::bind(&ReadguyDriver::handlePinSetup ,this));
@@ -231,17 +235,16 @@ void ReadguyDriver::server_setup(const String &notify, const serveFunc *serveFun
   }
   else { sfnames=nullptr; sfevents=nullptr; }
 
-
-  /*sv.on("/favicon.ico", HTTP_GET, [&](){
-    sv.client().write_P(PSTR("HTTP/1.1 200 OK\r\n"
-                             "Content-Type: image/x-icon\r\n"
-                             "Content-Length: 1150\r\n"
-                             "Connection: close\r\n\r\n"),89);
-    sv.client().write_P((const char *)faviconData,sizeof(faviconData));
-  });*/
+#ifdef READGUY_USE_DEFAULT_ICON
+  sv.on("/favicon.ico", HTTP_GET, [&](){
+    sv.send_P(200,"image/x-icon",(const char *)faviconData,sizeof(faviconData));
+  });
+#endif
   sv.begin();   
-  MDNS.begin("readguy");
-  //MDNS.addService("http","tcp",80);
+#ifdef READGUY_MDNS_SERVICE
+  MDNS.begin(READGUY_MDNS_SERVICE);
+  MDNS.addService("http","tcp",80);
+#endif
 #ifdef READGUY_SERIAL_DEBUG
   Serial.print(F("[Guy server] Done! visit "));
   if(WiFi.getMode() == WIFI_AP) Serial.println(F("192.168.4.1"));
@@ -288,7 +291,9 @@ bool ReadguyDriver::server_loop(){ //此时等待网页操作完成响应...
 }
 void ReadguyDriver::server_end(){
   sv.stop();
+#ifdef READGUY_MDNS_SERVICE
   MDNS.end();
+#endif
   sfuncs=-1;
   delete [] sfnames;
   delete [] sfevents;
@@ -318,11 +323,17 @@ void ReadguyDriver::handleInitPost(){
     btnTask.detach();
 #else
 #ifdef READGUY_ENABLE_SD
+#if (defined(READGUY_IDF_TARGET_MATRIX_SDIO))
+    if(READGUY_shareSpi) SD.end(); else SD_MMC.end();
+#else
     SD.end();//关闭SD卡
+#endif
+#ifdef READGUY_IDF_TARGET_WITH_VSPI
     if(sd_spi != epd_spi) { //共线时, 不要删除SD
       delete sd_spi;
       sd_spi=nullptr;
     }
+#endif
 #endif
     vTaskDelete(btn_handle);
 #endif
@@ -353,7 +364,7 @@ void ReadguyDriver::handleInitPost(){
       else if(i==19&&btn_count_>2) config_data[17]=sv.arg(FPSTR(args_name[19])).toInt()+1;
       else if(i==20&&btn_count_>2) config_data[17]=-config_data[17];
       else if(i==21) config_data[18] = sv.arg(FPSTR(args_name[21])).toInt();
-      else if(i==22) config_data[19] = sv.arg(FPSTR(args_name[22])).toInt(); //现已弃用 RTC 功能.
+      else if(i==22) config_data[19] = sv.arg(FPSTR(args_name[22])).toInt(); //RTC 将在2.0实装
       else if(i>22){ //用户数据
         config_data[i-1] = sv.arg(a_name).toInt();
       }
@@ -367,16 +378,16 @@ void ReadguyDriver::handleInitPost(){
     }
   }
   //尝试初始化各个硬件, 可能失败, 然后显示一些东西
-#if (defined(ESP8266) || defined(READGUY_IDF_TARGET_WITHOUT_FSPI))
+#if (defined(ESP8266))
   if(config_data[3]==-1) config_data[3] = config_data[10];
   else config_data[10] = config_data[3];
   if(config_data[4]==-1) config_data[4] = config_data[11];
   else config_data[11] = config_data[4];
   READGUY_shareSpi = true;
 #else
-  if(config_data[10] == config_data[3] && config_data[11] == config_data[4]) //检测到SPI共线
+  if(config_data[10] == config_data[3] || config_data[11] == config_data[4]) //检测到SPI共线
     READGUY_shareSpi = true;
-  else if(READGUY_shareSpi){
+  if(READGUY_shareSpi){
     if(config_data[3]==-1) config_data[3] = config_data[10];
     else config_data[10] = config_data[3];
     if(config_data[4]==-1) config_data[4] = config_data[11];
@@ -423,6 +434,9 @@ void ReadguyDriver::handleInitPost(){
   Serial.println(F("[Guy] Init details..."));
 #endif
   setTextSize(1);
+#if (defined(READGUY_IDF_TARGET_MATRIX_SDIO))
+  SD_MMC.end();
+#endif
   drawCenterString(setSDcardDriver()?"SD Init OK!":"SD Init failed!",
     guy_dev->drv_width()>>1,(guy_dev->drv_height()>>1)+20);
   setButtonDriver(); //初始化按钮..
@@ -514,7 +528,7 @@ void ReadguyDriver::handlePinSetup(){
     "甘草半糖板","微雪例程"
   };
   */
-#elif (defined(READGUY_IDF_TARGET_WITHOUT_FSPI))
+#elif (defined(CONFIG_IDF_TARGET_ESP32C3))
 #define DRIVER_TEMPLATE_N 0
 #define DRIVER_TEMPLATE_ARRAY_L 16
 /*
@@ -574,10 +588,10 @@ void ReadguyDriver::handlePinSetup(){
 #else
   for(int i=0;i<12;i++){
     s += F("<br/>");
-#if defined(READGUY_IDF_TARGET_WITHOUT_FSPI)
+#if (!(defined(READGUY_IDF_TARGET_WITH_VSPI) || defined(READGUY_IDF_TARGET_MATRIX_SDIO)))
     if(i==7) {
       i+=2; //优化ESP32C3的SPI配置体验 (C3只能共线)
-      s += F("(ESP32C3不支持SD卡独立SPI总线! SD_MOSI和SD_SCLK沿用EPDMOSI和EPDSCLK)<br/>");
+      s += F("(" _READGUY_PLATFORM "不支持SD卡独立SPI总线! SD_MOSI和SD_SCLK沿用EPDMOSI和EPDSCLK)<br/>");
     }
 #endif
 #endif
@@ -671,16 +685,32 @@ void ReadguyDriver::handleFinal(){
   else s+=F("SD卡已插入.<br/>"); //对于大容量(>2GB)卡, SDFS.info64(*sdInfo)函数调用速度太慢(17秒)
 #else
   else{
-    auto cardType = SD.cardType();
+    uint32_t sz;
+    uint32_t usesz;
+    sdcard_type_t cardType;
+#if (defined(READGUY_IDF_TARGET_MATRIX_SDIO))
+    if(READGUY_shareSpi){
+#endif
+      sz=(uint32_t)(SD.cardSize()/1024);
+      usesz=(uint32_t)(SD.usedBytes()/1024);
+      cardType=SD.cardType();
+#if (defined(READGUY_IDF_TARGET_MATRIX_SDIO))
+    }
+    else{
+      sz=(uint32_t)(SD_MMC.cardSize()/1024);
+      usesz=(uint32_t)(SD_MMC.usedBytes()/1024);
+      cardType=SD_MMC.cardType();
+    }
+#endif
     s+=F("SD Card Type: ");
          if(cardType == CARD_MMC)  s+=F("MMC");
     else if(cardType == CARD_SD)   s+=F("SDSC");
     else if(cardType == CARD_SDHC) s+=F("SDHC");
     else s+=F("UNKNOWN");
     s+=F(", SD card size: ");
-    s+=(uint32_t)(SD.cardSize()/1024);
+    s+=sz;
     s+=F(", used size: ");
-    s+=(uint32_t)(SD.usedBytes()/1024);
+    s+=usesz;
     s+=F("KB.<br/>");
   }
 #endif
@@ -701,11 +731,17 @@ void ReadguyDriver::handleFinal(){
   char cbuf[20]="";
 #if (defined(ESP8266))
   sprintf(cbuf, "0x%08x", ESP.getChipId());
-#else
+#elif (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
   uint64_t gotID;
   esp_flash_read_unique_chip_id(esp_flash_default_chip,&gotID);
   //sprintf(cbuf, "%016llx", gotID);
   sprintf(cbuf, "%08x%08x",(unsigned int)(gotID>>32),(unsigned int)(gotID&0xffffffffu));
+#else
+  uint32_t chipId = 0;
+  for(int i=0; i<17; i=i+8) {
+    chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+  }
+  sprintf(cbuf, "0x%08x",chipId);
 #endif
   s+=cbuf;
   s+=F("<br/>闪存容量: ");
@@ -771,7 +807,7 @@ const PROGMEM char ReadguyDriver::index_cn_html[] = // then write EpdMOSI pin
 "将引脚配置输入到框内, 即可成功点亮屏幕.</p><hr/><h2>引脚定义设定</h2><form "
 "name=\"input\" action=\"/verify\" method=\"POST\">";
 const PROGMEM char ReadguyDriver::index_cn_html2[] =
-#if (!defined(ESP8266) && !defined(READGUY_IDF_TARGET_WITHOUT_FSPI))
+#if (defined(READGUY_IDF_TARGET_WITH_VSPI) || defined(READGUY_IDF_TARGET_MATRIX_SDIO))
 "<input type=\"checkbox\" name=\"share\" value=\"1\">墨水屏和SD卡共享SPI<br/>"
 #endif
 "E-paper 型号<select id=\"et\" onchange=\"ct()\" name=\"epdtype\">";
@@ -785,14 +821,18 @@ const PROGMEM char ReadguyDriver::verify_html[] =
 const PROGMEM char ReadguyDriver::verify2_html[] =
 "<br/><hr/>完成上述4个操作之后屏幕上将会展现出验证码,输入验证码即可完成硬件配置.<br/></p><form action=\"/fin"
 "al\" method=\"POST\"><input type=\'text\' name=\'t_verify\' maxlength=\"6";
-const PROGMEM char ReadguyDriver::verifybtn_html[3][224] = {
+const PROGMEM char *ReadguyDriver::verifybtn_html[3] = {verifybtn_html1,verifybtn_html2,verifybtn_html3};
+
+const PROGMEM char ReadguyDriver::verifybtn_html1[] =
 "一个按键, 功能全保留, 操作可能比较繁琐.<br/>点按:下一个/向下翻页<br/>双击:确定/选择<br/>三连击:返回/退格<br/>"
-"长按半秒:上一个/向上翻页<br/>点按紧接着长按: 特殊操作",
+"长按半秒:上一个/向上翻页<br/>点按紧接着长按: 特殊操作";
+const PROGMEM char ReadguyDriver::verifybtn_html2[] =
 "两个按键, 操作可以满足需求.<br/>按键1点按:下一个/向下翻页<br/>按键1长按:上一个/向上翻页<br/>按键2点按:确定/选"
-"择<br/>按键2长按:返回/退格<br/>按住按键1点按2:特殊操作",
+"择<br/>按键2长按:返回/退格<br/>按住按键1点按2:特殊操作";
+const PROGMEM char ReadguyDriver::verifybtn_html3[] =
 "三个按键, 操作非常方便流畅.<br/>按键1:上一个/向上翻页<br/>按键2点按:确定/选择<br/>按键2长按: 返回/退格<br/>按"
-"键3:下一个/向下翻页<br/>双击点按2:切换输入法等特殊操作"
-};
+"键3:下一个/向下翻页<br/>双击点按2:切换输入法等特殊操作";
+
 const PROGMEM char ReadguyDriver::final_html[] =
 "欢迎使用 readguy</title></head><body><h1>readguy ";
 const PROGMEM char ReadguyDriver::afterConfig_html[] =
@@ -808,10 +848,14 @@ const PROGMEM char ReadguyDriver::final2_html[] =
 "钥<input type=\'text\' name=\'psk\' maxlength=\"63";
 */
 const PROGMEM char ReadguyDriver::end_html[] = 
-"<p>ReadGuy on device " _READGUY_PLATFORM " <a href=\"/pinsetup\">重新配置引脚</a> <a href=\"/update\">固件更新"
-"</a><br/>Copyright © FriendshipEnder <a href=\"" _GITHUB_LINK "\">GitHub</a> <a href=\"" _BILIBILI_LINK "\">"
+"<p>ReadGuy on device " _READGUY_PLATFORM " <a href=\"/pinsetup\">重新配置引脚</a>"
+#ifdef READGUY_UPDATE_SERVER
+" <a href=\"/update\">" READGUY_UPDATE_SERVER "</a>"
+#endif
+"<br/>Copyright © FriendshipEnder <a href=\"" _GITHUB_LINK "\">GitHub</a> <a href=\"" _BILIBILI_LINK "\">"
 "Bilibili</a><br/>版本: " READGUY_VERSION " ,编译日期: " __DATE__ " " __TIME__ "</p></body></html>";
-/*const PROGMEM uint8_t ReadguyDriver::faviconData[1150]={
+#ifdef READGUY_USE_DEFAULT_ICON
+const PROGMEM uint8_t ReadguyDriver::faviconData[1150]={
   0x0,0x0,0x1,0x0,0x1,0x0,0x10,0x10,0x0,0x0,0x1,0x0,0x20,0x0,0x68,0x4,0x0,0x0,0x16,0x0,0x0,0x0,0x28,0x0,
   0x0,0x0,0x10,0x0,0x0,0x0,0x20,0x0,0x0,0x0,0x1,0x0,0x20,0x0,0x0,0x0,0x0,0x0,0x40,0x4,0x0,0x0,0x0,0x0,
   0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x9d,0xaa,0xe8,0xff,0x74,0x73,0x77,0xff,0x74,0x73,
@@ -860,6 +904,7 @@ const PROGMEM char ReadguyDriver::end_html[] =
   0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1,0x0,0x0,0x0,0x3,0x0,0x0,0x0,0x1,0x0,0x0,0x0,0x1,
   0x0,0x0,0x0,0x1,0x0,0x0,0x80,0x1,0x0,0x0,0x80,0x0,0x0,0x0,0x80,0x1,0x0,0x0,0x80,0x1,0x0,0x0,0xc0,0x1,
   0x0,0x0,0xc0,0x3,0x0,0x0,0xe0,0x3,0x0,0x0,0xf0,0x7,0x0,0x0,0xfc,0x1f,0x0,0x0,0xf0,0xff,0x0,0x0
-};*/
+};
+#endif
 #endif /* END OF FILE. ReadGuy project.
 Copyright (C) 2023 FriendshipEnder. */

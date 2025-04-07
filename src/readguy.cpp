@@ -49,8 +49,9 @@ uint8_t    ReadguyDriver::static_sd_cs=0x7f;
 volatile uint8_t ReadguyDriver::sd_cs_busy=0;
 #endif
 
-const PROGMEM char ReadguyDriver::projname[8] = "readguy";
-const PROGMEM char ReadguyDriver::tagname[7] = "hwconf";
+
+const PROGMEM char ReadguyDriver::projname[8] = READGUY_NVS_PROJECTNAME;
+const PROGMEM char ReadguyDriver::tagname[8] = READGUY_NVS_CONFIGKEY;
 volatile uint8_t ReadguyDriver::spibz=0;
 #ifndef DYNAMIC_PIN_SETTINGS
 const int8_t ReadguyDriver::config_data[32] = {
@@ -77,7 +78,7 @@ const int8_t ReadguyDriver::config_data[32] = {
   READGUY_btn2     , 
   READGUY_btn3     , 
   READGUY_bl_pin   ,//前置光接口引脚IO
-  READGUY_rtc_type ,//使用的RTC型号. 现已弃用 RTC 功能. 保留是为了兼容性 让代码更简单维护
+  READGUY_rtc_type ,//使用的RTC型号. RTC 将在2.0实装 保留是为了兼容性 让代码更简单维护
   0                ,//READGUY_sd_ok   SD卡已经成功初始化
   0                ,//READGUY_buttons 按钮个数, 0-3都有可能
   -1, //用户自定义变量 同时用于esp32s3使用SDIO卡数据的DAT1 为-1代表不使用SDIO
@@ -86,7 +87,9 @@ const int8_t ReadguyDriver::config_data[32] = {
 };
 #endif
 #ifndef ESP8266
+#ifdef READGUY_IDF_TARGET_WITH_VSPI
 SPIClass *ReadguyDriver::sd_spi =nullptr;
+#endif
 SPIClass *ReadguyDriver::epd_spi=nullptr;
 TaskHandle_t ReadguyDriver::btn_handle;
 #endif
@@ -172,7 +175,7 @@ uint8_t ReadguyDriver::checkEpdDriver(){
 #define TEST_ONLY_VALUE 3
 #endif
 #ifdef READGUY_SERIAL_DEBUG
-  Serial.printf_P(PSTR("[Guy SPI] shareSpi? %d\n"),READGUY_shareSpi);
+  if(READGUY_shareSpi) Serial.println(F("[Guy SPI] share EPD and SD SPI."));
 #endif
   for(int i=TEST_ONLY_VALUE;i<8;i++){
     if(i<7 && config_data[i]<0) return 125;//必要的引脚没连接
@@ -312,11 +315,13 @@ uint8_t ReadguyDriver::checkEpdDriver(){
   else epd_spi->end();
   //epd_spi ->setFrequency(ESP32_DISP_FREQUENCY);
   //Serial.println("deleting guy_dev");
+#ifdef READGUY_IDF_TARGET_WITH_VSPI
   if(READGUY_shareSpi) sd_spi = epd_spi;
   else {
     if(sd_spi!=nullptr && sd_spi!=&SPI) { sd_spi->end(); delete sd_spi; } //防止SPI被delete掉
     sd_spi=nullptr;
   }
+#endif
   epd_spi->begin(READGUY_epd_sclk,READGUY_shareSpi?READGUY_sd_miso:-1,READGUY_epd_mosi);
   guy_dev->IfInit(*epd_spi, READGUY_epd_cs, READGUY_epd_dc, READGUY_epd_rst, READGUY_epd_busy);
 #endif
@@ -359,13 +364,18 @@ bool ReadguyDriver::setSDcardDriver(){
     对于esp32也要注意这个引脚是否是一个合法的引脚
     对于esp8266真的要重写, 比如esp8266需要允许某些引脚是可以复用的
     此处的函数必须是可以反复调用的, 即 "可重入函数" 而不会造成任何线程危险 */
-  if(READGUY_sd_cs>=0
-#ifndef ESP8266
-  &&READGUY_sd_miso!=READGUY_sd_mosi&&READGUY_sd_miso!=READGUY_sd_sclk&&READGUY_sd_miso!=READGUY_sd_cs&&READGUY_sd_mosi!=READGUY_sd_sclk
+#ifdef ESP8266
+  if( READGUY_sd_cs>=0 && READGUY_sd_cs!=READGUY_epd_cs && READGUY_sd_cs!=READGUY_epd_dc\
+    && READGUY_sd_cs!=READGUY_epd_rst && READGUY_sd_cs!=READGUY_epd_busy )
+#else
+  if(READGUY_sd_miso!=READGUY_sd_mosi&&READGUY_sd_miso!=READGUY_sd_sclk&&READGUY_sd_miso!=READGUY_sd_cs&&READGUY_sd_mosi!=READGUY_sd_sclk
   && READGUY_sd_mosi!=READGUY_sd_cs && READGUY_sd_sclk!=READGUY_sd_cs && READGUY_sd_miso>=0 && READGUY_sd_mosi>=0 && READGUY_sd_sclk>=0
+#if (!defined(READGUY_IDF_TARGET_MATRIX_SDIO))
+  && READGUY_sd_cs>=0 && READGUY_sd_cs!=READGUY_epd_cs && READGUY_sd_cs!=READGUY_epd_dc && READGUY_sd_cs!=READGUY_epd_rst && READGUY_sd_cs!=READGUY_epd_busy
 #endif
-  && READGUY_sd_cs!=READGUY_epd_cs && READGUY_sd_cs!=READGUY_epd_dc && READGUY_sd_cs!=READGUY_epd_rst && READGUY_sd_cs!=READGUY_epd_busy
-  ){ //SD卡的CS检测程序和按键检测程序冲突, 故删掉 (可能引发引脚无冲突但是显示冲突的bug)
+  )
+#endif
+  { //SD卡的CS检测程序和按键检测程序冲突, 故删掉 (可能引发引脚无冲突但是显示冲突的bug)
 #if (defined(READGUY_ALLOW_SDCS_AS_BUTTON))
     setSDbusy(1);
 #endif
@@ -374,15 +384,36 @@ bool ReadguyDriver::setSDcardDriver(){
     SDFS.setConfig(SDFSConfig(READGUY_sd_cs));
     READGUY_sd_ok = SDFS.begin();
 #else
-    if(sd_spi == nullptr) {
 #if (defined(READGUY_IDF_TARGET_WITH_VSPI))
-      sd_spi = new SPIClass(VSPI);
-#else
-      sd_spi = new SPIClass(FSPI); //ESP32S2和S3和C3 不支持VSPI, C3不支持FSPI
+    if(READGUY_shareSpi) sd_spi = epd_spi;
+    else{
+#ifdef READGUY_SERIAL_DEBUG
+      Serial.printf_P(PSTR("[Guy SD] SD-VSPI sclk%3d|mosi%3d|miso%3d|ss%5d\n"),\
+        READGUY_sd_sclk,READGUY_sd_mosi,READGUY_sd_miso,READGUY_sd_cs);
 #endif
+      if(sd_spi == nullptr) sd_spi = new SPIClass(VSPI);
+      else sd_spi->end();
       sd_spi->begin(READGUY_sd_sclk,READGUY_sd_miso,READGUY_sd_mosi); //初始化SPI
     }
-    READGUY_sd_ok = SD.begin(READGUY_sd_cs,*sd_spi,ESP32_SD_SPI_FREQUENCY); //初始化频率为20MHz
+    READGUY_sd_ok = SD.begin(READGUY_sd_cs,*(READGUY_shareSpi?epd_spi:sd_spi),ESP32_SD_SPI_FREQUENCY);
+#elif (defined(READGUY_IDF_TARGET_MATRIX_SDIO))
+    if(READGUY_shareSpi){
+      READGUY_sd_ok = SD.begin(READGUY_sd_cs,*epd_spi,ESP32_SD_SPI_FREQUENCY);
+    }
+    else{
+      //if(getReadguyUseSdio()){ //4-wire SDIO
+#ifdef READGUY_SERIAL_DEBUG
+      Serial.printf_P(PSTR("[Guy SD] SDMMC clk%3d|cmd%3d|d0 %3d|d1 %3d|d2 %3d|d3 %3d\n"),\
+        READGUY_sd_sclk,READGUY_sd_mosi,READGUY_sd_miso,READGUY_user1,READGUY_user2,READGUY_sd_cs);
+#endif
+      if(READGUY_sd_cs>=0) pinMode(READGUY_sd_cs, INPUT_PULLUP); //默认上拉
+      SD_MMC.setPins(READGUY_sd_sclk,READGUY_sd_mosi,READGUY_sd_miso,READGUY_user1,READGUY_user2,READGUY_sd_cs);
+//#else //不支持独立总线, 所以不会执行
+//      sd_spi = new SPIClass(FSPI); //ESP32S2和S3和C3 不支持VSPI, C3不支持FSPI
+//      sd_spi->begin(READGUY_sd_sclk,READGUY_sd_miso,READGUY_sd_mosi); //初始化SPI
+      READGUY_sd_ok = SD_MMC.begin("/sd",!getReadguyUseSdio(),false,ESP32_SD_MMC_FREQUENCY); //初始化频率为20MHz
+    }
+#endif
 #endif
 #if (defined(READGUY_ALLOW_SDCS_AS_BUTTON))
     setSDbusy(0);
@@ -550,6 +581,9 @@ fs::FS &ReadguyDriver::guyFS(uint8_t initSD){
 #ifdef ESP8266
     return SDFS;
 #else
+#if (defined(READGUY_IDF_TARGET_MATRIX_SDIO))
+    if(!READGUY_shareSpi) return SD_MMC;
+#endif
     return SD;
 #endif
   }

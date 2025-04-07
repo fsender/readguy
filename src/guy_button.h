@@ -63,10 +63,6 @@ SOFTWARE.
 
 #include "Arduino.h"
 #include <stdint.h>
-#if defined(ARDUINO_ARCH_ESP32) || defined(ESP8266)
-  #include <functional>
-#endif
-#include <Arduino.h>
 
 /////////////////////////////////////////////////////////////////
 

@@ -35,6 +35,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <FS.h>
+#include <functional>
 
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
@@ -91,7 +92,7 @@
 
 #include "guy_button.h" //改自Button2精简而来
 #include "guy_version.h"
-#include "guy_driver_config.h" //config
+#include "guy_config_host.h" //config
 #ifdef READGUY_USE_LITTLEFS
 #include <LittleFS.h>
 #else
@@ -105,8 +106,12 @@
 #ifdef READGUY_ESP_ENABLE_WIFI
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#ifdef READGUY_MDNS_SERVICE
 #include <ESP8266mDNS.h>
+#endif
+#ifdef READGUY_UPDATE_SERVER
 #include "ESP8266HTTPUpdateServer.h"
+#endif
 #endif
 #ifdef READGUY_ENABLE_SD
 #include <SDFS.h>
@@ -117,10 +122,17 @@
 #ifdef READGUY_ESP_ENABLE_WIFI
 #include <WiFi.h>
 #include <WebServer.h>
+#ifdef READGUY_MDNS_SERVICE
 #include <ESPmDNS.h>
+#endif
+#ifdef READGUY_UPDATE_SERVER
 #include "HTTPUpdateServer.h"
 #endif
+#endif
 #ifdef READGUY_ENABLE_SD
+#if (defined(READGUY_IDF_TARGET_MATRIX_SDIO))
+#include <SD_MMC.h>
+#endif
 #include <SD.h>
 #endif
 #include <freertos/FreeRTOS.h>
@@ -151,7 +163,7 @@
 #define READGUY_btn2     (config_data[16]) 
 #define READGUY_btn3     (config_data[17]) 
 #define READGUY_bl_pin   (config_data[18])//前置光接口引脚IO
-#define READGUY_rtc_type (config_data[19])//现已弃用 RTC 功能. 保留是为了兼容性 让代码更简单维护
+#define READGUY_rtc_type (config_data[19])//RTC 将在2.0实装 保留是为了兼容性 让代码更简单维护
 #define READGUY_sd_ok    (config_data[20]) //SD卡已经成功初始化
 #define READGUY_buttons  (config_data[21]) //按钮个数, 0-3都有可能
 
@@ -184,15 +196,25 @@
 #define GUY_BTN_OK       4 //返回/退出
 #define GUY_BTN_BACK     8 //特殊操作(如切换输入法)
 
+#if __cplusplus >= 201304L
+#define RG_IL_CONEXP constexpr inline
+#else
+#define RG_IL_CONEXP inline
+#endif
+
 class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
   public:
 #ifdef READGUY_ESP_ENABLE_WIFI
 #ifdef ESP8266
     typedef ESP8266WebServer ReadguyWebServer;
+  #ifdef READGUY_UPDATE_SERVER
     typedef ESP8266HTTPUpdateServer ReadguyUpdateServer;
+  #endif
 #else
     typedef WebServer ReadguyWebServer;
+  #ifdef READGUY_UPDATE_SERVER
     typedef HTTPUpdateServer ReadguyUpdateServer;
+  #endif
 #endif
 #endif
     ReadguyDriver();
@@ -361,7 +383,7 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     //以下是支持的所有屏幕型号 Add devices here!
     //添加屏幕驱动范例: 直接添加对应屏幕的类就可以用了
     static const char projname[8];
-    static const char tagname[7];
+    static const char tagname[8];
     //uint8_t config_wifi=0; //是否强行在初始化期间设置WiFi.
     void nvs_init();  //初始化持久存储器.
     void nvs_deinit();//保存持久存储器的内容
@@ -404,7 +426,9 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
 #endif
 #ifdef READGUY_ESP_ENABLE_WIFI
     ReadguyWebServer sv;
+#ifdef READGUY_UPDATE_SERVER
     ReadguyUpdateServer httpUpdater;
+#endif
     String guy_notify=emptyString; //嵌入在网页中的自定义标语
     int sfuncs=-1;
     String* sfnames=nullptr;
@@ -444,12 +468,17 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     static const PROGMEM char index_cn_html16[];
     static const PROGMEM char verify_html[];
     static const PROGMEM char verify2_html[];
-    static const PROGMEM char verifybtn_html[3][224];
+    static const PROGMEM char *verifybtn_html[3];
+    static const PROGMEM char verifybtn_html1[];
+    static const PROGMEM char verifybtn_html2[];
+    static const PROGMEM char verifybtn_html3[];
     static const PROGMEM char final_html[];
     static const PROGMEM char afterConfig_html[];
     static const PROGMEM char home_html[];
     static const PROGMEM char end_html[];
-    //static const PROGMEM uint8_t faviconData[1150];
+#ifdef READGUY_USE_DEFAULT_ICON
+    static const PROGMEM uint8_t faviconData[1150];
+#endif
 #endif
     static void looptask(); //按键服务函数
     static uint8_t rd_btn_f(uint8_t btn, bool activeLow);
@@ -481,67 +510,67 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
 #endif
     }
   public: //增加了一些返回系统状态变量的函数, 它们是静态的, 而且不会对程序造成任何影响.
-    constexpr int getShareSpi() const { return READGUY_shareSpi; }
-    constexpr int getEpdType () const { return READGUY_epd_type; } // 对应的epd驱动程序代号, -1为未指定
+    RG_IL_CONEXP int getShareSpi() const { return READGUY_shareSpi; }
+    RG_IL_CONEXP int getEpdType () const { return READGUY_epd_type; } // 对应的epd驱动程序代号, -1为未指定
         //显示驱动部分, 显示默认使用vspi (vspi也是默认SPI库的通道)
-    constexpr int getEpdMosi () const { return READGUY_epd_mosi; } // 目标显示器的 MOSI 引脚
-    constexpr int getEpdSclk () const { return READGUY_epd_sclk; } // 目标显示器的 SCLK 引脚
-    constexpr int getEpdCs   () const { return READGUY_epd_cs; } // 目标显示器的 CS   引脚
-    constexpr int getEpdDc   () const { return READGUY_epd_dc; } // 目标显示器的 DC   引脚
-    constexpr int getEpdRst  () const { return READGUY_epd_rst; } // 目标显示器的 RST  引脚
-    constexpr int getEpdBusy () const { return READGUY_epd_busy; } // 目标显示器的 BUSY 引脚
+    RG_IL_CONEXP int getEpdMosi () const { return READGUY_epd_mosi; } // 目标显示器的 MOSI 引脚
+    RG_IL_CONEXP int getEpdSclk () const { return READGUY_epd_sclk; } // 目标显示器的 SCLK 引脚
+    RG_IL_CONEXP int getEpdCs   () const { return READGUY_epd_cs; } // 目标显示器的 CS   引脚
+    RG_IL_CONEXP int getEpdDc   () const { return READGUY_epd_dc; } // 目标显示器的 DC   引脚
+    RG_IL_CONEXP int getEpdRst  () const { return READGUY_epd_rst; } // 目标显示器的 RST  引脚
+    RG_IL_CONEXP int getEpdBusy () const { return READGUY_epd_busy; } // 目标显示器的 BUSY 引脚
         //sd卡驱动部分, 默认使用hspi (sd卡建议用hspi)
-    constexpr int getSdMiso  () const { return READGUY_sd_miso; } // 目标sd卡的 MISO 引脚, sd_share_spi == 1 时无效
-    constexpr int getSdMosi  () const { return READGUY_sd_mosi; }// 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
-    constexpr int getSdSclk  () const { return READGUY_sd_sclk; }// 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
-    constexpr int getSdCs    () const { return READGUY_sd_cs; }// 目标sd卡的CS引脚. 对ESP32S3, 返回127代表使用SDMMC
-    constexpr int getI2cSda  () const { return READGUY_i2c_sda; }// 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
-    constexpr int getI2cScl  () const { return READGUY_i2c_scl; }// 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
+    RG_IL_CONEXP int getSdMiso  () const { return READGUY_sd_miso; } // 目标sd卡的 MISO 引脚, sd_share_spi == 1 时无效
+    RG_IL_CONEXP int getSdMosi  () const { return READGUY_sd_mosi; }// 目标sd卡的 MOSI 引脚, sd_share_spi == 1 时无效
+    RG_IL_CONEXP int getSdSclk  () const { return READGUY_sd_sclk; }// 目标sd卡的 SCLK 引脚, sd_share_spi == 1 时无效
+    RG_IL_CONEXP int getSdCs    () const { return READGUY_sd_cs; }// 目标sd卡的CS引脚. 对ESP32S3, 返回127代表使用SDMMC
+    RG_IL_CONEXP int getI2cSda  () const { return READGUY_i2c_sda; }// 目标i2c总线的SDA引脚, 当且仅当启用i2c总线时才生效
+    RG_IL_CONEXP int getI2cScl  () const { return READGUY_i2c_scl; }// 目标i2c总线的SCL引脚, 当且仅当启用i2c总线时才生效
         //按键驱动部分, 为负代表高触发, 否则低触发,
         //注意, 这里的io编号是加1的, 即 1或-1 代表 gpio0 的低触发/高触发
-    constexpr int getBtn1Pin () const { return abs((int)READGUY_btn1)-1; } 
-    constexpr int getBtn2Pin () const { return abs((int)READGUY_btn2)-1; } 
-    constexpr int getBtn3Pin () const { return abs((int)READGUY_btn3)-1; } 
-    constexpr int getBtn1Info() const { return READGUY_btn1; } 
-    constexpr int getBtn2Info() const { return READGUY_btn2; } 
-    constexpr int getBtn3Info() const { return READGUY_btn3; } 
-    constexpr int getBlPin   () const { return READGUY_bl_pin; } //前置光接口引脚IO
-    constexpr int getRtcType () const { return READGUY_rtc_type; } //现已弃用 RTC 功能. 保留是为了兼容性 让代码更简单维护
-    constexpr int getButtonsCount() const { return READGUY_buttons; } //按钮个数, 0-3都有可能
-    constexpr int getReadguy_user1 () const { return READGUY_user1; } //用户变量
-    constexpr int getReadguy_user2 () const { return READGUY_user2; } //用户变量
-    constexpr int getReadguy_user3 () const { return READGUY_user3; } //用户变量
-    constexpr int getReadguy_user4 () const { return READGUY_user4; } //用户变量
-    constexpr int getReadguy_user5 () const { return READGUY_user5; } //用户变量
-    constexpr int getReadguy_user6 () const { return READGUY_user6; } //用户变量
-    constexpr int getReadguy_user7 () const { return READGUY_user7; } //用户变量
-    constexpr int getReadguy_user8 () const { return READGUY_user8; } //用户变量
-    constexpr int getReadguy_user9 () const { return READGUY_user9; } //用户变量
-    constexpr int getReadguy_user10() const { return READGUY_user10;} //用户变量
-    constexpr int getReadguyUseSdio() const { //返回程序调用SD卡时 是否使用了SDIO
+    RG_IL_CONEXP int getBtn1Pin () const { return abs((int)READGUY_btn1)-1; } 
+    RG_IL_CONEXP int getBtn2Pin () const { return abs((int)READGUY_btn2)-1; } 
+    RG_IL_CONEXP int getBtn3Pin () const { return abs((int)READGUY_btn3)-1; } 
+    RG_IL_CONEXP int getBtn1Info() const { return READGUY_btn1; } 
+    RG_IL_CONEXP int getBtn2Info() const { return READGUY_btn2; } 
+    RG_IL_CONEXP int getBtn3Info() const { return READGUY_btn3; } 
+    RG_IL_CONEXP int getBlPin   () const { return READGUY_bl_pin; } //前置光接口引脚IO
+    RG_IL_CONEXP int getRtcType () const { return READGUY_rtc_type; } //RTC 将在2.0实装 保留是为了兼容性 让代码更简单维护
+    RG_IL_CONEXP int getButtonsCount() const { return READGUY_buttons; } //按钮个数, 0-3都有可能
+    RG_IL_CONEXP int getReadguy_user1 () const { return READGUY_user1; } //用户变量
+    RG_IL_CONEXP int getReadguy_user2 () const { return READGUY_user2; } //用户变量
+    RG_IL_CONEXP int getReadguy_user3 () const { return READGUY_user3; } //用户变量
+    RG_IL_CONEXP int getReadguy_user4 () const { return READGUY_user4; } //用户变量
+    RG_IL_CONEXP int getReadguy_user5 () const { return READGUY_user5; } //用户变量
+    RG_IL_CONEXP int getReadguy_user6 () const { return READGUY_user6; } //用户变量
+    RG_IL_CONEXP int getReadguy_user7 () const { return READGUY_user7; } //用户变量
+    RG_IL_CONEXP int getReadguy_user8 () const { return READGUY_user8; } //用户变量
+    RG_IL_CONEXP int getReadguy_user9 () const { return READGUY_user9; } //用户变量
+    RG_IL_CONEXP int getReadguy_user10() const { return READGUY_user10;} //用户变量
+    RG_IL_CONEXP bool getReadguyUseSdio() const { //返回程序调用SD卡时 是否使用了SDIO
 #ifdef CONFIG_IDF_TARGET_ESP32S3              //仅对ESP32S3可用
-      return (READGUY_user1 != -1) && (READGUY_user2 != -1);
+      return (READGUY_user1 != -1) && (READGUY_user2 != -1) && (READGUY_sd_cs != -1);
 #else
       return 0;                               //非ESP32S3平台不可用SDIO
 #endif
     } //用于esp32s3使用SDIO卡数据的DAT2
 #ifdef CONFIG_IDF_TARGET_ESP32S3              //仅对ESP32S3可用
-    constexpr int getSdio_dat0 () const { return getReadguyUseSdio()?READGUY_sd_miso:-1; } //用于esp32s3使用SDIO卡数据的DAT0
-    constexpr int getSdio_dat1 () const { return getReadguyUseSdio()?READGUY_user1  :-1; } //用于esp32s3使用SDIO卡数据的DAT1
-    constexpr int getSdio_dat2 () const { return getReadguyUseSdio()?READGUY_user2  :-1; } //用于esp32s3使用SDIO卡数据的DAT2
-    constexpr int getSdio_dat3 () const { return getReadguyUseSdio()?READGUY_sd_cs  :-1; } //用于esp32s3使用SDIO卡数据的DAT3
-    constexpr int getSdio_clk  () const { return getReadguyUseSdio()?READGUY_sd_sclk:-1; } //用于esp32s3使用SDIO卡数据的CLK
-    constexpr int getSdio_cmd  () const { return getReadguyUseSdio()?READGUY_sd_mosi:-1; } //用于esp32s3使用SDIO卡数据的CMD
+    RG_IL_CONEXP int getSdio_dat0 () const { return getReadguyUseSdio()?READGUY_sd_miso:-1; } //用于esp32s3使用SDIO卡数据的DAT0
+    RG_IL_CONEXP int getSdio_dat1 () const { return getReadguyUseSdio()?READGUY_user1  :-1; } //用于esp32s3使用SDIO卡数据的DAT1
+    RG_IL_CONEXP int getSdio_dat2 () const { return getReadguyUseSdio()?READGUY_user2  :-1; } //用于esp32s3使用SDIO卡数据的DAT2
+    RG_IL_CONEXP int getSdio_dat3 () const { return getReadguyUseSdio()?READGUY_sd_cs  :-1; } //用于esp32s3使用SDIO卡数据的DAT3
+    RG_IL_CONEXP int getSdio_clk  () const { return getReadguyUseSdio()?READGUY_sd_sclk:-1; } //用于esp32s3使用SDIO卡数据的CLK
+    RG_IL_CONEXP int getSdio_cmd  () const { return getReadguyUseSdio()?READGUY_sd_mosi:-1; } //用于esp32s3使用SDIO卡数据的CMD
 #else
-    constexpr int getSdio_dat0 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT0
-    constexpr int getSdio_dat1 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT1
-    constexpr int getSdio_dat2 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT2
-    constexpr int getSdio_dat3 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT3
-    constexpr int getSdio_clk  () const { return -1; } //用于esp32s3使用SDIO卡数据的CLK
-    constexpr int getSdio_cmd  () const { return -1; } //用于esp32s3使用SDIO卡数据的CMD
+    RG_IL_CONEXP int getSdio_dat0 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT0
+    RG_IL_CONEXP int getSdio_dat1 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT1
+    RG_IL_CONEXP int getSdio_dat2 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT2
+    RG_IL_CONEXP int getSdio_dat3 () const { return -1; } //用于esp32s3使用SDIO卡数据的DAT3
+    RG_IL_CONEXP int getSdio_clk  () const { return -1; } //用于esp32s3使用SDIO卡数据的CLK
+    RG_IL_CONEXP int getSdio_cmd  () const { return -1; } //用于esp32s3使用SDIO卡数据的CMD
 #endif
-    //constexpr int memWidth   () const { return guy_width ;  } //返回显存宽度(不是画幅宽度),不会随着画布旋转改变
-    //constexpr int memHeight  () const { return guy_height ; } //返回显存高度(不是画幅高度),不会随着画布旋转改变
+    //RG_IL_CONEXP int memWidth   () const { return guy_width ;  } //返回显存宽度(不是画幅宽度),不会随着画布旋转改变
+    //RG_IL_CONEXP int memHeight  () const { return guy_height ; } //返回显存高度(不是画幅高度),不会随着画布旋转改变
     int drvWidth () const { return READGUY_cali==127?guy_dev->drv_width():0;  } //返回显示屏硬件宽度(不是画幅宽度)
     int drvHeight() const { return READGUY_cali==127?guy_dev->drv_height():0; } //返回显示屏硬件高度(不是画幅高度)
   //int width () const { return (getRotation()&1)?drvHeight():drvWidth(); }
@@ -562,5 +591,6 @@ class ReadguyDriver: public LGFX_Sprite{ // readguy 基础类
     void drawImageStage(LGFX_Sprite &sprbase,LGFX_Sprite &spr,int32_t x,int32_t y,
       uint8_t stage,uint8_t totalstage,int32_t zoomw=0,int32_t zoomh=0);
 };
+#undef RG_IL_CONEXP
 #endif /* END OF FILE. ReadGuy project.
 Copyright (C) 2023 FriendshipEnder. */

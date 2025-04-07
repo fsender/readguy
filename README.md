@@ -2,9 +2,30 @@
 
 [![arduino-library-badge](https://www.ardu-badge.com/badge/readguy.svg?)](https://www.ardu-badge.com/readguy)
 
-<img src="extra/artset/readguy_theme3.png" width="30%" height="auto">
+## ReadGuy 2.0 预告
 
-**版本1.4.2正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
+1. 内置驱动,无其他 不跨平台 多平台
+
+2. 自定义脚本驱动 不跨平台 多平台
+
+3. 内置 不自定义 带脚本 跨平台 数据存eeprom或者nvs. 支持从文件系统加载
+
+4. 文件系统接口优化
+
+5. 灰度显示优化
+
+6. 按键逻辑优化: 双按键:按键1点按下一个 长按上一个 长按过程中点按2则功能5 按键2点按确定 长按取消
+三按键 左键点按松开时候结算: 上一个, 左键长按也是上一个 右键点按长按都是下一个 按住左键按中间功能5 中键点按确定 长按取消
+
+7. 支持pre_init post_init 等设备限定的脚本,在初始化设备时和设备休眠时都可以执行类似功能. 此外readguy2.0的二进制是兼容1.x的
+
+8. 摒弃默认刷屏方式使用dispWriter函数 速度太慢, 改为使用两种示例, 正常读取显示和函数读取显示都支持调用
+
+敬请期待
+
+<img src="https://github.com/fsender/readguy/blob/1.4.2/extra/artset/readguy_theme3.png?raw=true" width="30%" height="auto">
+
+**版本1.5.0正式发布！欢迎分享、star和fork~** 上面的图是项目看板娘, 盖. 可爱的盖姐在等你哟~
 
 **即将发布7个全新的屏幕驱动: 欢迎支持! (详见后面的驱动表格)**
 
@@ -20,9 +41,9 @@
 
 ### 一次编译即可使程序兼容多种屏幕！
 
-<img src="extra/artset/readguy_girl.png" width="25%" height="auto">
+<img src="https://github.com/fsender/readguy/blob/1.4.2/extra/artset/readguy_girl.png?raw=true" width="25%" height="auto">
 
-<img src="extra/artset/view.jpg" width="auto" height="auto">
+<img src="https://github.com/fsender/readguy/blob/1.4.2/extra/artset/view.jpg?raw=true" width="auto" height="auto">
 
 #### 目前支持ESP芯片平台、多种屏幕型号、1～3个按钮操控、SD卡、前置光亮度控制！
 
@@ -227,7 +248,7 @@ firmware.bin              0x10000
 
 5. 编译目标是`ESP32`且使用`ESP-IDF arduino component`时, 需要单独安装[`LittleFS`](https://github.com/joltwallet/esp_littlefs)库来实现相关功能. 在项目内新建文件夹`components`, 在`components`文件夹内放入刚刚克隆的`LittleFS`库. *详见下图**上**方红框*. (使用纯arduino时跳过此步骤)
 
-<img src="extra/artset/build_dir_structure.png" width="20%" height="auto">
+<img src="https://github.com/fsender/readguy/blob/1.4.2/extra/artset/build_dir_structure.png?raw=true" width="20%" height="auto">
 
 6. 把`readguy`的`extra`文件夹内的`platformio`文件夹内所有文件都放在当前目录. 这些文件包含推荐的ESP32 sdkconfig, flash分区表等文件. 使用`pio run -t menuconfig`可以更改项目的menuconfig数据. (使用纯arduino时跳过此步骤)
 

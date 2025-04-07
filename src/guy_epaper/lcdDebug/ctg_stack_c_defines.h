@@ -128,12 +128,16 @@ public:
       auto cfg = _bus_instance.config();    // 获取总线配置的结构。
 #ifndef ESP8266
 #ifdef CONFIG_IDF_TARGET_ESP32
-      cfg.spi_host = SPI3_HOST;     // 选择要使用的 SPI  (VSPI_HOST or HSPI_HOST)
+      cfg.spi_host = VSPI_HOST;     // 选择要使用的 SPI  (VSPI_HOST or HSPI_HOST)
 #else
       cfg.spi_host = SPI1_HOST;     // 选择要使用的 SPI  (VSPI_HOST or HSPI_HOST)
 #endif
       cfg.use_lock   =  true;        // 使用锁时设置为 True
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
       cfg.dma_channel = SPI_DMA_CH_AUTO; // Set the DMA channel (1 or 2. 0=disable) 设置要打开的 DMA 通道 (0=DMA关闭)
+#else
+      cfg.dma_channel = 0; // Auto DMA channel isn't supported. Don't use DMA by default.
+#endif
 #endif
       cfg.spi_mode = 0;             // SPI设置通讯模式 (0 ~ 3)
 #if   (defined(DISPLAY_TYPE_ST7789_240320) || defined(DISPLAY_TYPE_ST7789_240240) || defined(DISPLAY_TYPE_ST7789_135240))

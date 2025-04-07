@@ -40,10 +40,10 @@
 //务必保证这些版本号是一致的.
 //另外, 在提交新版本之前, 不要忘记在github上创建release, 否则Arduino IDE会读不到
 #define READGUY_V_MAJOR 1
-#define READGUY_V_MINOR 4
-#define READGUY_V_PATCH 2
+#define READGUY_V_MINOR 5
+#define READGUY_V_PATCH 0
 #define READGUY_VERSION_VAL (READGUY_V_MAJOR*1000+READGUY_V_MINOR*100+READGUY_V_PATCH*10)
-#define READGUY_VERSION "1.4.2"
+#define READGUY_VERSION "1.5.0"
 
 #define _GITHUB_LINK      "https://github.com/fsender/readguy"
 #define _BILIBILI_LINK    "https://www.bilibili.com/video/BV1f94y187wz"

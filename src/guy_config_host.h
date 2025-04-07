@@ -3,14 +3,15 @@
  * 如果有条件请到 extra/artset/reward 中扫描打赏,否则请在 Bilibili 上支持我.
  * 项目交流QQ群: 926824162 (萌新可以进来问问题的哟)
  * 郑重声明: 未经授权还请不要商用本开源项目编译出的程序.
- * @file guy_epaper_config.h
+ * @file guy_config_host.h
  * @author FriendshipEnder (f_ender@163.com), Bilibili: FriendshipEnder
- * @brief EPD驱动基础配置文件. 用户可以根据自己对库的编译需求来修改此文件.
+ * @brief readguy 配置主文件. 如果要修改配置请移步 guy_driver_config.h
  * @version 1.0
- * @date 2023-09-21
+ * @date create: 2025/4/7
+ * last modify:  2025/4/7
 
  * @attention
- * Copyright (c) 2022-2023 FriendshipEnder
+ * Copyright (c) 2022-2025 FriendshipEnder
  * 
  * Apache License, Version 2.0
  * 
@@ -26,14 +27,107 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef _READGUY_CONFIG_HOST_H_FILE
+#define _READGUY_CONFIG_HOST_H_FILE
 
-#ifndef _GUY_E_PAPER_CONFIG_H_FILE
-#define _GUY_E_PAPER_CONFIG_H_FILE
+#if __has_include("readguy_user_config.h")
 
-//#define MEPD_DEBUG_WAVE 16 //取消此行注释来监视SPI的通信数据 (用于debug), 可以查看主控和屏幕的通信数据
-//#define MEPD_DEBUG_WAITTIME //显示墨水屏的刷新时间, 单位是毫秒
-#define FLOYD_STEINBERG_DITHERING //默认使用更好的floyd steinberg抖动算法,取消注释则用bayer图案抖动算法
-#define FLOYD_DITHERING_16GREY //使用更好的floyd steinberg抖动算法显示16阶灰度,取消注释则使用阈值填充
+#undef DYNAMIC_PIN_SETTINGS
+#undef READGUY_NVS_PROJECTNAME
+#undef READGUY_NVS_CONFIGKEY  
+#undef READGUY_NVS_DRIVERKEY  
+#undef READGUY_ENABLE_WIFI
+#undef READGUY_ESP_ENABLE_WIFI
+#undef READGUY_CONF_AP_SSID
+#undef READGUY_CONF_AP_PASS
+#undef READGUY_USE_DEFAULT_ICON
+#undef READGUY_MDNS_SERVICE
+#undef READGUY_UPDATE_SERVER
+#undef READGUY_ENABLE_I2C
+#undef READGUY_ENABLE_SD
+#undef READGUY_USE_LITTLEFS 
+#undef READGUY_ESP8266_EEPROM_OFFSET 
+#undef READGUY_ALLOW_DC_AS_BUTTON
+#undef READGUY_ALLOW_EPDCS_AS_BUTTON
+#undef READGUY_ALLOW_SDCS_AS_BUTTON
+#undef READGUY_DEFAULT_MIN_DEBOUNCE_MS 
+#undef READGUY_LONG_PRESS_MS 
+#undef READGUY_DOUBLE_PRESS_MS 
+#undef READGUY_LONG_REPEAT_MS
+#undef BTN_LOOPTASK_STACK
+#undef BTN_LOOPTASK_CORE_ID 
+#undef BTN_LOOPTASK_PRIORITY 
+#undef BTN_LOOPTASK_DELAY 
+#undef ESP8266_SPI_FREQUENCY 
+#undef ESP32_DISP_FREQUENCY 
+#undef ESP32_SD_SPI_FREQUENCY
+#undef ESP32_SD_MMC_FREQUENCY
+#undef READGUY_SERIAL_DEBUG
+#undef READGUY_shareSpi
+#undef READGUY_epd_type
+#undef READGUY_epd_mosi
+#undef READGUY_epd_sclk
+#undef READGUY_epd_cs
+#undef READGUY_epd_dc
+#undef READGUY_epd_rst
+#undef READGUY_epd_busy
+#undef READGUY_sd_miso
+#undef READGUY_sd_mosi
+#undef READGUY_sd_sclk
+#undef READGUY_sd_cs
+#undef READGUY_i2c_sda
+#undef READGUY_i2c_scl
+#undef READGUY_btn1
+#undef READGUY_btn2
+#undef READGUY_btn3
+#undef READGUY_bl_pin
+#undef READGUY_user1
+#undef READGUY_user2
+#undef READGUY_user3
+#undef READGUY_user4
+#undef READGUY_user5
+#undef READGUY_user6
+#undef READGUY_user7
+#undef READGUY_user8
+#undef READGUY_user9
+#undef READGUY_user10
+#undef READGUY_rtc_type
+#undef MEPD_DEBUG_WAVE
+#undef MEPD_DEBUG_WAITTIME
+#undef FLOYD_STEINBERG_DITHERING
+#undef FLOYD_DITHERING_16GREY
+#undef READGUY_583A_DUAL_BUFFER
+#include "readguy_user_config.h"
+#else
+#include "guy_driver_config.h"
+#endif
+
+
+#ifdef ESP8266 //应用于
+#define _READGUY_PLATFORM "ESP8266"
+//#define READGUY_IDF_TARGET_WITHOUT_FSPI //该器件不能使用fspi
+#else
+#ifdef CONFIG_IDF_TARGET_ESP32
+#define _READGUY_PLATFORM "ESP32"
+#define READGUY_IDF_TARGET_WITH_VSPI //该器件拥有vspi
+#elif defined(CONFIG_IDF_TARGET_ESP32S2)
+#define _READGUY_PLATFORM "ESP32S2"
+#define READGUY_IDF_TARGET_MATRIX_SDIO //该器件支持矩阵SDIO
+#elif defined(CONFIG_IDF_TARGET_ESP32S3)
+#define _READGUY_PLATFORM "ESP32S3"
+#define READGUY_IDF_TARGET_MATRIX_SDIO //该器件支持矩阵SDIO
+#elif defined(CONFIG_IDF_TARGET_ESP32C3)
+#define _READGUY_PLATFORM "ESP32C3"
+#define READGUY_IDF_TARGET_MATRIX_SDIO //该器件支持矩阵SDIO
+#elif defined(CONFIG_IDF_TARGET_ESP32C6) //新增 ESP32C6 (暂未测试)
+#define _READGUY_PLATFORM "ESP32C6"
+#define READGUY_IDF_TARGET_MATRIX_SDIO //该器件支持矩阵SDIO
+#else
+#define _READGUY_PLATFORM "Unknown" //Prepare for ESP32-C6, H7, etc.
+#warning Unknown platform! Readguy will run with unexpected (maybe hardware) errors!
+#endif
+#endif
+
 
 // ***********************************************************************
 
@@ -68,7 +162,5 @@
 
 #define EPD_DRIVERS_NUM_MAX 21 //此选项请不要取消注释掉, 有几个屏幕就写多少.
 
-#define READGUY_583A_DUAL_BUFFER //对于单缓存的5.83屏幕,启用双缓存支持. 相当不建议注释掉,否则不能刷白色
-
 #endif /* END OF FILE. ReadGuy project.
-Copyright (C) 2023 FriendshipEnder. */
+Copyright (C) 2025 FriendshipEnder. */
